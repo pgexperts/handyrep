@@ -1,0 +1,114 @@
+handyrep2
+
+config
+
+    master/replica config needs to be able to rewrite itself
+    how?
+
+    server_defaults
+        port
+        PGDATA
+        PGCONF
+        ssh_user
+        ssh_key
+        pgpass
+        restart_method (pg_ctl, service, init)
+        restart_command
+        promotion_method (pg_ctl, trigger_file)
+        promotion_parameters
+        archive_mode (off, archive, dual)
+        streaming (on, off)
+        clone_method (pg_basebackup, rsync, scp)
+        clone_command (actual command params)
+
+    initial server info:
+        name (unique)
+        hostname
+        role (master, replica)
+        failover_priority (None for don't failover to here)
+        all settings for defaults above (basically overrides)
+
+    archive:
+        archive_host
+        archive_method
+        action_on_fail
+        -- how to configure with WAL-E?
+
+    handyrep_server:
+        poll_interval: 
+        ssh_command:
+        master_check_method:
+        master_check_parameters:
+        (call to which function to check if one is the current handyrep master)
+        log_verbose
+        handyrep_schema
+        handyrep_table
+
+    passwords:
+        admin_password:
+        read_password:
+
+    failover:
+        auto_failover (y|n)
+        poll_method (select, pg_isready)
+        poll_interval (min)
+        fail_retry (int)
+        recovery_wait (time)
+        selection_method (priority, poll)
+        max_replay_lag (MB)
+        remaster (yes,no)
+        extra_failover_commands
+
+methods:
+
+    initialize_handyrep:
+        check all servers
+        create servers file
+        create tables if necessary
+
+    check_handyrep_master:
+        check if we're the current
+        handyrep master server.  methods:
+            corosync_ip
+            pgbouncer
+            trigger file
+            database table
+
+    copy_handyrep_config:
+        pull handyrep configuration
+        from database
+        to local files
+
+    verify_master:
+        use poll_method to see if master is up
+        call failover if failed and auto_failover
+
+    check_replica_status:
+        checks that the replica is replicating
+        checks lag
+
+    update_server_info:
+        checks that server status matches what's in
+        the server info files, updates if not
+
+    get_server_info:
+        either human-friendly or JSON server data.
+
+    failover:
+        optional param to_server
+        go through ready_for_failover checks
+
+    reclone (server):
+        --force option for deleting data
+        clone and make the server a replica of its current master
+        
+    change_server:
+        all server settings should be changeable
+        several will cause changes of state on the server
+        including changing replication heading
+
+    
+
+
+
+    
