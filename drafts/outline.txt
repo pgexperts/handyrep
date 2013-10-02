@@ -34,6 +34,7 @@ config
         archive_method
         action_on_fail
         -- how to configure with WAL-E?
+        archive_delete_hours
 
     handyrep_server:
         poll_interval: 
@@ -42,6 +43,7 @@ config
         master_check_parameters:
         (call to which function to check if one is the current handyrep master)
         log_verbose
+        handyrep_db
         handyrep_schema
         handyrep_table
 

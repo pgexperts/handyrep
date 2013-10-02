@@ -98,13 +98,35 @@ class HandyRep(Object):
         # check for fail
         # sync server config
 
-    def clone(self, replicadict, clonefrom=None, masterserver=None, force=False):
+    def clone(self, replicadict, clonefrom=None):
         # use config master if not supplied
-        
+        # abort if this is already a replica
+        # clone using clone_method
+        # write recovery.conf
+        # start replica
+        # update servers.save
+        # check replica status to make sure it's up
+            # updates servers.save and fail if not
+        # report success
 
     def reclone(self, replicaserver, clonefrom=None):
         # check server config
         # shutdown replica, if required
+        # clone using clone_method, with delete flag if necessary
+        # write recovery.conf
+        # write servers.save
+        # start up replica
+        # check status
+            # update servers.save on fail
+        # return success
+
+    def shutdown(self, servername):
+        # shutdown server
+        # poll for shut down
+
+    def remove(self, replicaserver):
+        # shutdown replica
+        # remove from servers.save
 
     def get_server_info(self, servername=None, format="json", sync=True):
         # formats: json, yaml

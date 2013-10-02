@@ -10,12 +10,8 @@ General
 * Can be run in a failover configuration, with a 2nd Handyrep which doesn't accept commands.
 * Designed to minimize the per-node installation requirements.
 * Controls one single PostgreSQL cluster of master-slave replicas
-* Binary replication only
 * Supports multiple replicas
 * Supports cascading replication
-* Only one (network) location for archiving
-* Supporting only PostgreSQL 9.2 and later
-* Does not deal with PITR, except to support WAL-E archiving
 
 Setup Requirements
 ------------------
@@ -36,9 +32,11 @@ On Nodes:
 * sudo
 * postgres port open to HandyRep server
 * directory controlled by handyrep user and accessible to postgres user
+* postgresql.conf set up for replication
 
 Optional on Nodes:
 * WAL-E and/or archive scripts
+* rsync/ssh config to other nodes
 
 Configuration
 -------------
@@ -48,6 +46,7 @@ Configuration
 * Servers.save is generated and written by the runtime, and is automatically updated with current server information.
 * Both configuration files are written to the database in a table called handyrep.
 * Configuration files are timestamped to figure out "latest".
+* All server configuration stuff has a "default" and a per-server setting as an override.
 
 Plug-Ins
 --------
@@ -89,14 +88,36 @@ Actions Supported by HandyRep
 * stonith (the master)
 * promote (a replica)
 * remaster (a replica)
+* clone (a new replica)
 * reclone (a replica)
+* shutdown (a server)
+* remove (a replica)
 * get server info (current config)
 * get server by role (master, replica)
 * validate server settings (against correct format)
 * change server (new config)
 * clean archive (of old files)
 
+Limitations
+-----------
 
+* Only one (network) location for archiving
+* Supporting only PostgreSQL 9.2 and later
+* Does not deal with PITR, except to support WAL-E archiving
+* Supports only one cluster
+* Does not manage postgresql.conf at all
+* Binary replication only
+* Assumes that hostnames are universal, not relative
+* Does not do rsync/ssh config on nodes
+
+Future Plans
+------------
+
+* integrate with Salt/Puppet/Chef
+* write replication config stuff for PostgreSQL.conf (probably through Salt/Puppet/Chef)
+* GUI interface
+* ability to query any handyrep server in a cluster
+* support pg_rewind
 
 
 
