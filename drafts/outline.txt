@@ -2,8 +2,9 @@ handyrep2
 
 config
 
-    master/replica config needs to be able to rewrite itself
-    how?
+    config.yaml file contains the "starting" config.
+    current real config for servers is in server.yaml, which is
+        written out by handyrep each time the config changes.
 
     server_defaults
         port
@@ -93,7 +94,12 @@ methods:
 
     get_server_info:
         either human-friendly or JSON server data.
+        by server or all servers
 
+    get_server_by_role:
+        "master" or "replica"
+        yields server information
+        
     failover:
         optional param to_server
         go through ready_for_failover checks
@@ -106,9 +112,3 @@ methods:
         all server settings should be changeable
         several will cause changes of state on the server
         including changing replication heading
-
-    
-
-
-
-    
