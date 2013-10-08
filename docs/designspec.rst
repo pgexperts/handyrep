@@ -17,7 +17,7 @@ Setup Requirements
 ------------------
 
 On Handyrep Server:
-* python 2.7+, plus fabric, paramiko, pyyaml, psycopg2, and uWSGI
+* python 2.7+, plus fabric, paramiko, pyyaml, psycopg2, jinja2 and uWSGI
 * ssh and rsync
 * ssh keys to all servers as user with sudo postgres and root
 * postgres password
@@ -102,6 +102,7 @@ Limitations
 -----------
 
 * Only one (network) location for archiving
+* Assumes that all replicas can access the same archive
 * Supporting only PostgreSQL 9.2 and later
 * Does not deal with PITR, except to support WAL-E archiving
 * Supports only one cluster
@@ -109,6 +110,7 @@ Limitations
 * Binary replication only
 * Assumes that hostnames are universal, not relative
 * Does not do rsync/ssh config on nodes
+* Assumes that all nodes use the same administration methods.
 
 Future Plans
 ------------
@@ -118,6 +120,7 @@ Future Plans
 * GUI interface
 * ability to query any handyrep server in a cluster
 * support pg_rewind
+* push archive script from HandyRep server
 
 
 

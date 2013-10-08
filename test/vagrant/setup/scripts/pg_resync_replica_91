@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+# Simple script to re-sync a PITR replica
+# Version 1.7.  Last updated 2012-08-28.
+
+# Copyright (c) 2010-2012, PostgreSQL, Experts, Inc.
+# Licensed under The PostgreSQL License;
+# http://www.postgresql.org/about/licence
+# or the end of this file for details.
+
+# grab the config variables
+CONF_FILE=/var/lib/postgresql/scripts/pitr-replication.conf
+. ${CONF_FILE}
+
+# SSH and SSH_OPT are defined in the config file above
+export PGDATA PGUSER
+
+if ! echo $PATH | grep /usr/pgsql-9.1/bin > /dev/null 2>&1; then
+  export PATH=/usr/pgsql-9.1/bin:$PATH
+fi
+
+# Get the command line options
+TEMP=$(getopt -o "hp" --long help,pgpool,fullsync -n "$0" -- "$@")
+
+eval set -- "$TEMP"
+
+while true ; do
+        case "$1" in
+                -h|--help) help=1 ; shift ;;
+                -p|--pgpool) PGPOOL=1 ; shift ;;
+                -f|--fullsync) FULLSYNC=1 ; shift ;;
+
+                # \`$2' necessary evil
+                --) shift ; break ;;
+                *) echo "Internal error!" ; exit 1 ;;
+        esac
+done
+
+# Allow overriding the safeguards for pgpool scripting by
+# specifying --pgpool on the command line
+if [ -z "${PGPOOL}" -a -z "${FULLSYNC}" ]; then
+  if [ -f ${RECOVERYCONFDIR}/recovery.conf -o -f ${RECOVERYCONFDIR}/recovery.done ]; then
+    echo 'Looks like this is the replica, continuing.'
+    # rename recovery.done to recovery.conf if it exists
+    if [ -f ${RECOVERYCONFDIR}/recovery.done ]; then
+      mv ${RECOVERYCONFDIR}/recovery.done ${RECOVERYCONFDIR}/recovery.conf
+    fi
+  else
+    echo 'No recovery.conf or recovery.done file.'
+    echo 'This might not be the replica.'
+    echo 'You should only run this script on the replica!'
+    exit 1
+  fi
+else
+  # Create the recovery.conf from the template
+  if [ -d "${PGDATA}" ]; then
+    sed "s/host=[0123456789.]*/host=${MASTER}/" $(dirname ${CONF_FILE})/recovery.conf > ${RECOVERYCONFDIR}/recovery.conf
+    #sed "s/host=[0123456789.abcdefghijklmnopqrstuvwxyz]* /host=${MASTER} / ; s#/barman/[0123456789.abcdefghijklmnopqrstuvwxyz]*/wals#/barman/${MASTER}/wals#" $(dirname ${CONF_FILE})/recovery.conf > ${RECOVERYCONFDIR}/recovery.conf
+  fi
+fi
+
+# Remove the trigger file if it exists
+if [ -f ${BRINGUP} ]; then
+  rm -f ${BRINGUP}
+fi
+
+# Stop postgres if running
+if [ $OS = 'Joyent' ] && [ $USE_SVCADM ]; then
+  /usr/sbin/svcadm disable postgresql:pg91
+else
+  ${PGCTL} -m immediate ${PGCTLOPTIONS} stop 2> /dev/null
+fi
+
+# Did we stop postgres successfully?
+if ps -ef | grep [p]ostgres: > /dev/null 2>&1; then
+  echo "Shutdown failed.  Aborting."
+  exit 1
+fi
+
+# Remove the contents of the DATA directory
+if [ -d "${PGDATA}" ]; then
+  # stash the conf files in the data directory
+  CONFFILETMPDIR=$(mktemp -d /tmp/pgconf.XXXXXXXX)
+  cp -pP ${PGDATA}/*.conf ${PGDATA}/*.done ${PGDATA}/server.* ${PGDATA}/scripts ${PGDATA}/pgpool* ${CONFFILETMPDIR} 2>/dev/null
+  rm -rf ${PGDATA}/*
+else
+  CONFFILETMPDIR=$(mktemp -d /tmp/pgconf.XXXXXXXX)
+  sed "s/host=[0123456789.]*/host=${MASTER}/" $(dirname ${CONF_FILE})/recovery.conf > ${CONFFILETMPDIR}/recovery.conf
+  mkdir -p ${PGDATA}
+fi
+
+echo 'Fetching filesystem image'
+${PGBASEBACKUP} -x -h ${MASTER} -D ${PGDATA}
+
+# retrieve the saved conf files
+if [ -d "${CONFFILETMPDIR}" ]; then
+  ls ${CONFFILETMPDIR}/*
+  cp -pP ${CONFFILETMPDIR}/* ${PGDATA}
+  rm -rf ${CONFFILETMPDIR}
+fi
+
+# Start postgres unless we were called with --pgpool option
+if [ -z "${PGPOOL}" ]; then
+  if [ $OS = 'Joyent' ] && [ $USE_SVCADM ]; then
+    /usr/sbin/svcadm enable postgresql:pg91
+  else
+    ${PGCTL} -D $(dirname ${PGCONFFILE}) start 2>/dev/null 1>/dev/null < /dev/null
+  fi
+fi
+
+# -----------------------------------------------------------------------------
+# The replication-tools package is licensed under the PostgreSQL License:
+#
+# Copyright (c) 2010-2012, PostgreSQL, Experts, Inc.
+#
+# Permission to use, copy, modify, and distribute this software and its
+# documentation for any purpose, without fee, and without a written agreement is
+# hereby granted, provided that the above copyright notice and this paragraph
+# and the following two paragraphs appear in all copies.
+#
+# IN NO EVENT SHALL POSTGRESQL EXPERTS, INC. BE LIABLE TO ANY PARTY FOR DIRECT,
+# INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST
+# PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN
+# IF POSTGRESQL EXPERTS, INC. HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
+# DAMAGE.
+#
+# POSTGRESQL EXPERTS, INC. SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT
+# NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+# PARTICULAR PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS,
+# AND POSTGRESQL EXPERTS, INC. HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE,
+# SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.

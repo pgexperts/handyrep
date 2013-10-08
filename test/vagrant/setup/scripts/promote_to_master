@@ -1,0 +1,331 @@
+#!/usr/bin/env bash
+
+# Script for semi-automated promotion of a standby server to
+# being a master server, including making sure the other master
+# is down. 
+#
+# ***********************************
+# * WARNING: this script may not be appropriate for your particular use case;
+# * different organizations may desire different logic for their respective
+# * failover scenarios. Please consider your requirements when using or
+# * adapting this script.
+# ***********************************
+
+# Version 1.6.  Last updated 2011-02-17.
+
+# Copyright (c) 2010-2011, PostgreSQL, Experts, Inc.
+# Licensed under The PostgreSQL License; see
+# http://www.postgresql.org/about/licence
+# or the end of this file for details.
+
+# grab the current config variables
+CONF_FILE=/var/lib/postgresql/scripts/pitr-replication.conf
+. ${CONF_FILE}
+
+function restart_postgresql_on_master
+{
+  echo "Attempting to restart postgresql on ${MASTER}."
+  if [ $OS = 'Joyent' ] && [ $USE_SVCADM ]; then
+    ${SSH} ${SSH_OPT} ${MASTER} "/usr/sbin/svcadm disable postgresql:pg90" \
+ && ${SSH} ${SSH_OPT} ${MASTER} "/usr/sbin/svcadm enable postgresql:pg90"
+  else
+    ${SSH} ${SSH_OPT} ${MASTER} "${PGCTL} -l ${PGDATA}/../pgstartup.log -w -D $(dirname ${PGCONFFILE}) start"
+  fi
+
+  if [ $? -ne 0 ]; then
+    echo "Restart postgresql on ${MASTER} failed!"
+    echo "${MASTER} should be the master again, but"
+    echo "starting the postgresql service failed."
+    echo "Please inspect."
+    exit 2
+  else
+    echo "Postgresql successfully restarted on ${MASTER}."
+    echo "${MASTER} should still be the master."
+    echo "Please verify functionality."
+  fi
+}
+
+function reset_conf_on_replica
+{
+  echo "Attempting to reset ${CONF_FILE} changes on ${REPLICA}"
+  sed  -e "s/MASTER=${REPLICA}/MASTER=${MASTER}/" -e " s/REPLICA=${MASTER}/REPLICA=${REPLICA}/" ${CONF_FILE} > ${CONF_FILE}.swap && mv ${CONF_FILE}.swap ${CONF_FILE}
+  export ROLLBACK_EXIT_CODE = $?
+  if [ $ROLLBACK_EXIT_CODE -ne 0 ]; then
+    echo "Unable to rollback ${CONF_FILE} changes on ${REPLICA}"
+  else
+    mv ${CONF_FILE}.swap ${CONF_FILE}
+    echo "Config file changes successfully rolled back on ${REPLICA}"
+    sed "s/host=[0123456789.]*/host=${MASTER}/" $(dirname ${CONF_FILE})/recovery.conf > ${RECOVERYCONFDIR}/recovery.conf
+  fi
+}
+function reset_conf
+{
+  echo "Attempting to reset config file changes on ${MASTER}"
+  ${SSH} ${SSH_OPT} ${MASTER} /bin/sh -c "'sed -e \"s/MASTER=${REPLICA}/MASTER=${MASTER}/\" -e \"s/REPLICA=${MASTER}/REPLICA=${REPLICA}/\" ${CONF_FILE} > ${CONF_FILE}.swap && mv ${CONF_FILE}.swap ${CONF_FILE}'"
+  if [ $? -ne 0 ]; then
+    echo "Unable to rollback config file changes on ${MASTER}"
+  else
+    echo "Config file changes successfully rolled back on ${MASTER}"
+    ${SSH} ${SSH_OPT} ${MASTER} "[ -f ${RECOVERYCONFDIR}/recovery.conf ] && rm -f ${RECOVERYCONFDIR}/recovery.conf"
+    reset_conf_on_replica
+    restart_postgresql_on_master
+    exit 1
+  fi
+}
+
+# Don't resync by default
+DONT_RESYNC=1
+
+# Get the command line options
+TEMP=$(getopt -o "hr" --long help,resync -n "$0" -- "$@")
+
+eval set -- "$TEMP"
+
+while true ; do
+        case "$1" in
+                -h|--help) help=1 ; shift ;;
+                # Note: even if we set --resync here, it's 
+                # possible to be overriden by errors later.
+                -r|--resync) unset DONT_RESYNC ; shift ;;
+                
+                # \`$2' necessary evil
+                --) shift ; break ;;
+                *) echo "Internal error!" ; exit 1 ;;
+        esac
+done
+
+# Let's make sure we're running as the postgres OS user, 
+# this is the replica and we haven't been brought up already
+
+if [ "$(id -un)" != "postgres" ]; then
+  echo "This script must be run as the postgres user."
+  exit 1
+fi
+
+# check if this is the master already because this script should only be run on
+# the slave
+if [ $OS = 'Joyent' ]; then
+  if ifconfig -a | grep inet ${MASTER} > /dev/null 2>&1; then
+    THIS_IS_MASTER=yes
+  fi
+elif /sbin/ip addr | grep "inet ${MASTER}" > /dev/null 2>&1; then
+  THIS_IS_MASTER=yes
+fi
+
+if [ $THIS_IS_MASTER ]; then
+  echo "This is already the master, no need to promote. If you wanted to promote the current slave, please execute the script on that server."
+  exit 1
+fi
+
+# Is there already a promotion in progress?
+if [ -f ${BRINGUP} ]; then
+  echo "${BRINGUP} file already exists!"
+  echo "Possible promotion in progress. Aborting."
+  echo "${MASTER} is still the master."
+  exit 1
+fi
+
+# Let's make sure we're standing by before we try to bring up the server
+# First we check for the recovery.conf
+if [ ! -f "${RECOVERYCONFDIR}/recovery.conf" ]; then
+  echo "${RECOVERYCONFDIR}/recovery.conf does not exist. ${REPLICA} not standing by. Aborting."
+  exit 1
+fi
+
+# Verify we can connect to the standby and it is in recovery
+ISINRECOVERY=$(${PSQL} -Atc "SELECT pg_is_in_recovery()" -U ${PGUSER} postgres)
+if [ $? -eq 0 ]; then
+  if [ ${ISINRECOVERY} != "t" ]; then
+    echo "${REPLICA} is not standing by. Aborting."
+    echo "${MASTER} is still the master."
+    exit 1
+  fi
+else
+  echo "Could not connect to psql server on ${REPLICA}. Aborting."
+  echo "${MASTER} is still the master."
+  exit 1
+fi
+
+# Looks like the standby is good.  Time to get to work.
+
+# request the current master to switch xlog files so we're
+# as up to date as possible
+echo 'Requesting the master switch xlog files'
+${PSQL} -c "SELECT pg_switch_xlog();" -h ${MASTER} -U ${PGUSER} postgres  > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "Unable to establish psql connection with current master."
+  PSQLMASTERFAIL=1
+fi
+
+# verify ssh connectivity to the current master
+${SSH} ${SSH_OPT} ${MASTER} "/bin/true"
+if [ $? -ne 0 ]; then
+  if [ -z "${PSQLMASTERFAIL}" ]; then
+    echo "Unable to establish SSH connection to ${MASTER}"
+    echo "but, psql connection succeeded."
+    echo "Please remedy or proceed with manual switchover."
+    echo "${MASTER} is still the master."
+    exit 1
+  fi
+  # We couldn't SSH to it, can we ping it?
+  if ping -q -c 1 ${MASTER} > /dev/null; then
+    echo "Unable to SSH or psql to ${MASTER}; however"
+    echo "ping reveals that the server is up."
+    echo "Aborting promotion. Please fix or proceed"
+    echo "with manual failover process."
+    exit 1
+  else
+    MASTERDOWN=1
+  fi
+fi
+
+# Are the services running on the master?
+if [ -z "${MASTERDOWN}" ]; then
+  ${SSH} ${SSH_OPT} ${MASTER} "head -1 ${PGDATA}/postmaster.pid 2> /dev/null | xargs ps -fp > /dev/null 2>&1"
+  if [ $? -ne 0 ]; then
+    echo "PostgreSQL service down on ${MASTER}"
+    MASTERDOWN=1
+  fi
+fi
+
+if [ -z "${MASTERDOWN}" ]; then
+  echo "Attempting to stop PostgreSQL service on ${MASTER}"
+  # shut down postgresql on the current master
+  if [ $OS = 'Joyent' ] && [ $USE_SVCADM ]; then
+    ${SSH} ${SSH_OPT} ${MASTER} "/usr/sbin/svcadm disable postgresql:pg90"
+  else
+    ${SSH} ${SSH_OPT} ${MASTER} "${PGCTL} -w -m fast -D ${PGDATA} ${PGCTLOPTIONS} stop"
+  fi
+
+  if [ $? -ne 0 ]; then
+    echo "Failed to stop postgresql on master: ${MASTER}."
+    echo "Please inspect the logs and proceed with manual switchover."
+    echo "${MASTER} is still the master but may be in the process of shutting down."
+    exit 1
+  fi
+
+  # Change the MASTER and REPLICA values in the conf file on the old MASTER
+  ${SSH} ${SSH_OPT} ${MASTER} /bin/sh -c "'sed -e \"s/MASTER=${MASTER}/MASTER=${REPLICA}/\" -e \"s/REPLICA=${REPLICA}/REPLICA=${MASTER}/\" ${CONF_FILE} > ${CONF_FILE}.swap && mv ${CONF_FILE}.swap ${CONF_FILE}'"
+  if [ $? -ne 0 ]; then
+    echo "Failed to update ${CONF_FILE} on ${MASTER}."
+    # Attempt to restart the master's postgresql
+    restart_postgresql_on_master
+    exit 1
+  fi
+fi
+
+# Change the MASTER and REPLICA values in the conf file on the old REPLICA
+sed -e "s/MASTER=${MASTER}/MASTER=${REPLICA}/" -e "s/REPLICA=${REPLICA}/REPLICA=${MASTER}/" ${CONF_FILE} > ${CONF_FILE}.swap && mv ${CONF_FILE}.swap ${CONF_FILE}
+if [ $? -ne 0 ]; then
+  echo "Failed to update ${CONF_FILE} on ${REPLICA}."
+  # Try to put the conf file back as it was and restart
+  # postgresql service
+  reset_conf
+  exit 1
+fi
+
+echo "Bringing up PostgreSQL on ${REPLICA} as the master."
+
+# Bring up the new master
+touch ${BRINGUP}
+if [ $? -ne 0 ]; then
+  # We had a problem creating the BRINGUP file, let's see if it exists or not
+  if [ -f ${BRINGUP} ]; then
+    echo "${BRINGUP} exists, but touch reported an error.  Attempting to continue."
+  else
+    echo "Unable to create ${BRINGUP}; please check permissions on $(dirname ${BRINGUP})."
+    # Try to put the conf file back as it was and restart
+    # postgresql service
+    reset_conf
+    exit 1
+  fi
+fi
+
+# remove the no-archiving file on the old replica
+if [ -f ${NOARCHIVEFILE} ]; then
+  rm -f ${NOARCHIVEFILE}
+  if [ $? -ne 0 ]; then
+    echo "Unable to rm ${NOARCHIVEFILE}, please check permissions and complete promotion manually."
+    DONT_RESYNC=1
+  fi
+fi
+
+if [ -z "${MASTERDOWN}" ]; then
+  # create the no-archiving file on the old master
+  ${SSH} ${SSH_OPT} ${MASTER} "touch ${NOARCHIVEFILE}"
+  if [ $? -ne 0 ]; then 
+    echo "Unable to touch ${NOARCHIVEFILE}, please check permissions, create ${NOARCHIVEFILE}, then resync the new replica manually."
+    DONT_RESYNC=1
+  fi
+
+  # create the recovery.conf file on the old master
+  ${SSH} ${SSH_OPT} ${MASTER} "sed 's/host=[0123456789.]*/host=${REPLICA}/' $(dirname ${CONF_FILE})/recovery.conf > ${RECOVERYCONFDIR}/recovery.conf"
+  if [ $? -ne 0 ]; then
+    echo "Unable to create the ${RECOVERYCONFDIR}/recovery.conf file.  Please verify permissions, create the recovery.conf, then resync the new replica manually."
+    DONT_RESYNC=1
+  fi
+fi
+
+# Loop for a bit and see if we can connect to the new master
+echo -n "Waiting for postgresql service to be available."
+i=0
+while [ ${i} -lt 10 ]; do 
+  ISINRECOVERY=$(${PSQL} -Atc "SELECT pg_is_in_recovery()" -U ${PGUSER} postgres)
+  if [ "${ISINRECOVERY}" = "f" ]; then
+    PSQL_SUCCESS=1
+    break
+  fi
+  echo -n "."
+  sleep 5
+  i=$[$i+1]
+done
+echo
+
+# remove the recovery.done file if it exists
+if [ -z "${PSQL_SUCCESS}" ]; then
+  echo "Unable to connect to new master ${REPLICA} via psql."
+  echo "Please verify functionality, then resync the new replica ${MASTER} manually."
+  reset_conf
+else
+  if [ -f ${PGDATA}/recovery.done ]; then 
+    rm -f ${PGDATA}/recovery.done
+  fi
+fi
+
+# resync the old master from the new master
+if [ -n "${DONT_RESYNC}" -o -n "${MASTERDOWN}" ]; then
+  echo "Skipping resync of new replica ${MASTER}."
+  exit 1
+else
+  echo "Initiating replica resync. This may take a while..."
+  ${SSH} ${SSH_OPT} ${MASTER} "$(dirname ${CONF_FILE})/pg_resync_replica < /dev/null >& /dev/null"
+  if [ $? -ne 0 ]; then
+    echo "resync of ${MASTER} failed.  Please fix errors and resync manually."
+    exit 1
+  fi
+fi
+echo "This is now the Master.  Please verify replication is continuing properly."
+
+exit 0
+
+# -----------------------------------------------------------------------------
+# The replication-tools package is licensed under the PostgreSQL License:
+# 
+# Copyright (c) 2010-2011, PostgreSQL, Experts, Inc.
+# 
+# Permission to use, copy, modify, and distribute this software and its
+# documentation for any purpose, without fee, and without a written agreement is
+# hereby granted, provided that the above copyright notice and this paragraph
+# and the following two paragraphs appear in all copies.
+# 
+# IN NO EVENT SHALL POSTGRESQL EXPERTS, INC. BE LIABLE TO ANY PARTY FOR DIRECT,
+# INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST
+# PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN
+# IF POSTGRESQL EXPERTS, INC. HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
+# DAMAGE.
+# 
+# POSTGRESQL EXPERTS, INC. SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT
+# NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+# PARTICULAR PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS,
+# AND POSTGRESQL EXPERTS, INC. HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE,
+# SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.

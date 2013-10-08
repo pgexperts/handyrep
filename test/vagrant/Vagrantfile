@@ -1,0 +1,69 @@
+require 'ipaddr'
+
+VAGRANTFILE_API_VERSION = "2"
+CONFIGURATION = {
+  domain: 'test.com',
+  box: 'precise64.box',
+  box_url: 'http://files.vagrantup.com/precise64.box',
+  starting_ip_address: '192.168.199.201',
+  vms: [
+    {
+      name: :john,
+      primary: true,
+      hostname: 'john',
+      install_master: false,
+      memory: 256,
+      provision_script: "bootstrap-john.sh"
+    },
+    {
+      name: :paul,
+      primary: false,
+      hostname: 'paul',
+      install_master: false,
+      memory: 256,
+      provision_script: "bootstrap-paul.sh"
+    }
+  ]
+}
+
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  config.vm.box = CONFIGURATION[:box]
+  config.vm.box_url = CONFIGURATION[:box_url]
+
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_host = true
+  config.hostmanager.ignore_private_ip = false
+  config.hostmanager.include_offline = false
+
+  ip_address = IPAddr.new(CONFIGURATION[:starting_ip_address])
+  CONFIGURATION[:vms].each do |vm|
+    vm[:ip_address] = ip_address.to_s
+    ip_address = ip_address.succ
+  end
+
+  # provision
+
+  CONFIGURATION[:vms].each do |vm|
+    config.vm.define vm[:name], primary: vm[:primary] do |vagrant_vm|
+      vagrant_vm.vm.box = CONFIGURATION[:box]
+      vagrant_vm.vm.box_url = CONFIGURATION[:box_url]
+
+      # set allowed memory
+      config.vm.provider :virtualbox do |vb|
+        vb.customize ["modifyvm", :id, "--memory", vm[:memory]]
+      end
+
+      vagrant_vm.vm.hostname = vm[:hostname]
+      vagrant_vm.vm.network :private_network, ip: vm[:ip_address]
+      vagrant_vm.hostmanager.aliases = ["#{vm[:hostname]}.#{CONFIGURATION[:domain]}"]
+
+      config.vm.synced_folder "setup", "/setup"
+      config.vm.provision :shell, :path => vm[:provision_script]
+
+    end
+  end
+
+end
+

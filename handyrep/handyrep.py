@@ -1,18 +1,18 @@
-
+import fabric
+from lib.utils import HandyRepUtils
+from lib.config import ReadConfig
+from lib.error import CustomError
+from plugins.plugins import Plugins
 
 class HandyRep(Object):
 
-    def __init__(config_file='handyrep.conf', server_file='servers.save'):
-        # open the config file
-        # validate the file
-        # open the current servers file
-            # create if not present
-            # validate if present
-        # open the handyrep table on the master
-            # create if not present
-            # if handyrep table more updated
-            # use that
+    def __init__(config_file='handyrep.conf'):
+        # read and validate the config file
+        self.conf = ReadConfig(config_file)
+        self.conf.read()
+        self.sync_config()
         # return a handyrep object
+        return self
 
     def check_my_status(self):
         # check plugin method to see
@@ -27,6 +27,7 @@ class HandyRep(Object):
 
     def sync_config(self):
         # open the handyrep table on the master
+        
             # create if not present
         # if handyrep table more updated
             #supercede local servers.save
@@ -167,7 +168,19 @@ class HandyRep(Object):
         # delete files from archive which are older
         # than setting
 
-            
+    def push_replica_conf(self, replicaserver):
+        # write new recovery.conf per servers.save
+        # restart the replica
+        # report success
+
+    def push_archive_script(self, masterserver):
+        # write a wal_archive executable script
+        # to the replica
+
+    def use_plugin(self, pluginname, parameters):
+        # call method from the plugins class
+
+
 
 
         

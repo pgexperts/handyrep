@@ -19,7 +19,7 @@ config
         promotion_parameters
         archive_mode (off, archive, dual)
         streaming (on, off)
-        clone_method (pg_basebackup, rsync, scp)
+        clone_method (pg_basebackup, rsync)
         clone_command (actual command params)
 
     initial server info:
