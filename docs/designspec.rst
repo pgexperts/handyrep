@@ -11,7 +11,6 @@ General
 * Designed to minimize the per-node installation requirements.
 * Controls one single PostgreSQL cluster of master-slave replicas
 * Supports multiple replicas
-* Supports cascading replication
 
 Setup Requirements
 ------------------
@@ -121,6 +120,7 @@ Future Plans
 * ability to query any handyrep server in a cluster
 * support pg_rewind
 * push archive script from HandyRep server
+* support cascading replication
 
 
 
