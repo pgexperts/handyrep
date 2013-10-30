@@ -51,7 +51,7 @@ Plug-Ins
 --------
 
 * users can write plugin methods for various tasks: server check, cloning, new master selection, extra failover commands
-* these plugins are python code added to plugins.py
+* these plugins are python code added to the plugin folder
 * they can then be added to the config
 
 Daemon
@@ -71,6 +71,50 @@ Polling and Automated Failover
 * HandyRep will try to fail over to new master or roll back on fail
 * If configured, HandyRep will also try to remaster other replicas.  It will NOT rollback if these fail.
 * Will also execute post-failover_commands as configured.
+
+Cluster and Server Statuses
+---------------------------
+
+Handyrep will consistently report the "health" of the cluster.  This health will have 3 degrees:
+
+* 0 : "unknown" : status checks have not been run.  This status should only exist for a very short time.
+* 1 :  "healthy" : cluster has a viable master, and all replicas are "healthy" or "lagged"
+* 3 : "warning" : cluster has a viable master, but has one or more issues, including connnection problems, failure to fail over, or downed replicas.
+* 5 : "down" : cluster has no working master, or is in an indeterminate state and requires administrator intervention
+
+This is recorded in four cluster-wide fields:
+
+* status: the above status label
+* status_no: the above status number
+* status_ts: the last timestamp when status was checked
+* status_message: a message about the last issue found which causes a change in status.  May not be complete or representative.
+
+Servers also have several statuses:
+
+* 0, "unknown" : server has not been checked yet
+* 1. "healthy" : server is operating normally
+* 2. "lagged" : for replicas, indicates that the replica is running but has exceeded the configured lag threshold
+* 3. "warning" : server is operating, but has one or more issues, such as inability to ssh, or out-of-connections.
+* 4. "unavailable" : cannot determine status of server because we cannot connect to it.
+* 5. "down" : server is verified down.
+
+This is recorded in four per-server fields, which are the same as the four fields for the general cluster status, but apply only to that specific server.  For servers which are disabled, the status will no longer be updated.
+
+Return Dictionary
+-----------------
+
+* All methods which are callable from the outside return a dictionary.
+* This dictionary has "result" and "details" keys, and possibly other keys.
+* "result" is either "SUCCESS" or "FAIL"
+
+Plugins
+-------
+
+* Most direct server actions are implemented via plugins.
+* Each plugin is its own module in the plugins directory.
+* Each plugin module has exactly one class, named after itself
+* Each plugin class has two methods, run() and test().  Parameters of these methods vary.
+* run() and test() should return the usual Return Dictionary.
 
 Actions Supported by HandyRep
 -----------------------------
@@ -100,16 +144,21 @@ Actions Supported by HandyRep
 Limitations
 -----------
 
-* Only one (network) location for archiving
+* Only one (network or mounted) location for archiving
 * Assumes that all replicas can access the same archive
+* Assumes that all nodes can use the same archiving scripts, if pushing scripts is enabled
+* Assumes that the postgres user does all archive work
 * Supporting only PostgreSQL 9.2 and later
 * Does not deal with PITR, except to support WAL-E archiving
 * Supports only one cluster
 * Does not manage postgresql.conf at all
 * Binary replication only
+* Streaming or dual replication.  No archive-only replication.
 * Assumes that hostnames are universal, not relative
 * Does not do rsync/ssh config on nodes
 * Assumes that all nodes use the same administration methods.
+* does not support the "trigger file" method of replica promotion
+* does not manage .pgpass or other authentication setup for the replication user
 
 Future Plans
 ------------
@@ -119,8 +168,8 @@ Future Plans
 * GUI interface
 * ability to query any handyrep server in a cluster
 * support pg_rewind
-* push archive script from HandyRep server
 * support cascading replication
+* support runtime changes of the archive location by pushing recovery.conf and other scripts
 
 
 
