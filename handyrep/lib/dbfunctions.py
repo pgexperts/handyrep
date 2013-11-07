@@ -1,6 +1,6 @@
 import re
 import psycopg2, psycopg2.extensions
-from error import CustomError
+from lib.error import CustomError
 import logging
 
 # contains an assortment of random functions to make

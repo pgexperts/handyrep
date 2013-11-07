@@ -13,9 +13,7 @@ class failplugin(HandyRepPlugin):
         return
 
     def run(self, *args, **kwargs):
-        return { "result" : "FAIL",
-            "details" : "broken plugin called or no such plugin exists: %s" % self.pluginname }
+        return return_dict( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )
 
     def test(self, *args, **kwargs):
-        return { "result" : "FAIL",
-            "details" : "broken plugin called or no such plugin exists: %s" % self.pluginname }
+        return return_dict( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )

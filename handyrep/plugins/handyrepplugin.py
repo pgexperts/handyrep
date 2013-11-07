@@ -1,10 +1,15 @@
 from fabric.api import sudo, run, env, local, settings
 from fabric.network import disconnect_all
-from handyrep.lib.error import CustomError
+from lib.error import CustomError
+from lib.dbfunctions import get_one_val, get_one_row, execute_it, get_pg_conn
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failes, return_dict
 import json
 from datetime import datetime, timedelta
 import logging
 import time
+import psycopg2
+import psycopg2.extensions
+from os.path import join
 
 class HandyRepPlugin(object):
 
@@ -107,6 +112,27 @@ class HandyRepPlugin(object):
         return rundict
         disconnect_all()
 
+    def push_template(self, servername, templatename, destination, template_params, new_owner=None, file_mode=700):
+        # renders a template file and pushes it to the
+        # target location on an external server
+        # not implemented for writing to localhost at this time
+        env.key_filename = self.servers[servername]["ssh_key"]
+        env.user = self.servers[servername]["ssh_user"]
+        env.disable_known_hosts = True
+        env.host_string = self.servers[servername]["hostname"]
+        try:
+            update_template( templatefile, destination, use_jinja=True, context=template_params, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, use_mode=file_mode )
+            if new_owner:
+                sudo("chown %s %s" % (new_owner, destination,))
+        except:
+            retdict = return_dict(False, "could not push template %s to server %s" % (templatename, servername,))
+        else:
+            retdict = return_dict(True, "pushed template")
+        finally:
+            disconnect_all()
+
+        return retdict
+
     def get_conf(self, *args):
         # a "safe" configuration reader
         # gets a single option or returns None if that option isn't set
@@ -138,3 +164,48 @@ class HandyRepPlugin(object):
             logging.error("%s: %s" % (category, message,))
         else:
             logging.info("%s: %s" % (category, message,))
+        return
+
+    def get_replica_list(self):
+        reps = []
+        reps.append(self.get_replicas_by_status("healthy"))
+        reps.append(self.get_replicas_by_status("lagged"))
+        return reps
+
+    def get_master_name(self):
+        for servname, servdata in self.servers.iteritems():
+            if servdata["role"] == "master" and servdata["enabled"]:
+                return servname
+        # no master?  return None and let the calling function
+        # handle it
+        return None
+
+    def connection(self, servername, autocommit=False):
+        connect_string = "dbname=%s host=%s port=%s user=%s application_name=handyrep " % (self.conf["handyrep"]["handyrep_db"], self.servers[servername]["hostname"], self.servers[servername]["port"], self.conf["handyrep"]["handyrep_user"],)
+
+        if self.conf["handyrep"]["handyrep_pw"]:
+                connect_string += " password=%s " % self.conf["handyrep"]["handyrep_pw"]
+
+        try:
+            conn = psycopg2.connect( connect_string )
+        except:
+            raise CustomError("DBCONN","ERROR: Unable to connect to Postgres using the connections string %s" % connect_string)
+
+        if autocommit:
+            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+
+        return conn
+
+    def master_connection(self, mautocommit=False):
+        # connect to the master.  if unable to
+        # or if it's not really the master, fail
+        master = self.get_master_name()
+        if not master:
+            raise CustomError("CONFIG","No master server found in server configuration")
+
+        try:
+            mconn = self.connection(master, autocommit=mautocommit)
+        except:
+            raise CustomError("DBCONN","Unable to connect to configured master server.")
+
+        return mconn

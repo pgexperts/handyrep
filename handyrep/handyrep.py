@@ -10,7 +10,9 @@ import time
 import importlib
 from plugins.failplugin import failplugin
 import lib.fabric_utils
-from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict
+import psycopg2
+import psycopg2.extensions
 
 class HandyRep(Object):
 
@@ -181,11 +183,22 @@ class HandyRep(Object):
         self.log("CONFIG","No configured and enabled master found", True, "WARNING")
         return
 
+    def cluster_status_update(self, newstatus, newstatus_message=""):
+        # called during certain operations
+        # such as failover in order to change
+        self.log("STATUS", "cluster status changed to %s: %s", newstatus, newstatus_message)
+        self.status.update( "status" = newstatus,
+            "status_no" = self.status_no(newstatus),
+            "status_message" = newstatus_message,
+            "status_ts" = now_string )
+        # don't return anything, we don't check it
+        return
+
     def check_hr_master(self):
         # check plugin method to see
         hrs_method = self.get_plugin(self.conf["handyrep"]["master_check_method"])
         # return result
-        hrstatus = hrs_method(*self.conf["handyrep"],["master_check_parameters"])
+        hrstatus = hrs_method.run(*self.conf["handyrep"],["master_check_parameters"])
         return hrstatus
 
     def verify_servers(self, update_defs = True):
@@ -362,7 +375,7 @@ class HandyRep(Object):
         poll = get_plugin(self.conf["failover"]["poll_method"])
         master = get_master_name()
         if master:
-            check = poll.run(self.conf, self.servers, master)
+            check = poll.run(master)
             if failed(check):
                 self.status_update(master, "down", "master does not respond to polling")
             else:
@@ -383,7 +396,7 @@ class HandyRep(Object):
         if not replicaserver in self.servers:
             return return_dict( False, "Requested server not configured" )
         poll = get_plugin(self.conf["failover"]["poll_method"])
-        check = poll.run(self.conf, self.servers, replicaserver)
+        check = poll.run(replicaserver)
         if succeeded(check):
             # if responding, improve the status if it's 
             if self.servers[replicaserver]["status"] in ["unknown","down","unavailable"]:
@@ -392,7 +405,7 @@ class HandyRep(Object):
                 # update timestamp but don't change message/status
                 self.status_update(replicaserver, self.servers[replicaserver]["status"])
         else:
-            self.status_update(replicaserver, "down", "server not responding to polling")
+            self.status_update(replicaserver, "unavailable", "server not responding to polling")
         return check
 
     def verify_master(self):
@@ -415,24 +428,24 @@ class HandyRep(Object):
         #if both psql and ssh down, we're down:
         if "ssh" in issues and "psql" in issues:
             self.status_update(master, "unavailable", "psql and ssh both failing")
-            return returndict(False, "master not responding")
+            return returndict(False, "master not responding", issues)
         # if we have ssh but not psql, see if we can check if pg is running
         elif "ssh" not in issues and "psql" in issues:
             # try polling first, maybe master is just full up on connections
             if succeeded(poll_master()):
                 self.status_update(master, "warning", "master running but we cannot connect")
-                return return_dict(True, "master running but we cannot connect")
+                return return_dict(True, "master running but we cannot connect", issues)
             else:
                 # ok, let's ssh in and see if we can psql
                 checkpg = pg_service_status(master)
                 if succeeded(checkpg):
                     # postgres is up, just misconfigured
-                    self.status_update(master, "unavailable", "master running but we cannot connect")
-                    return return_dict(True, "master running but we cannot connect")
+                    self.status_update(master, "warning", "master running but we cannot connect")
+                    return return_dict(True, "master running but we cannot connect", issues)
                 else:
                     self.status_update(master, "down", "master is down")
-                    return return_dict(False, "master is down")
-        # if we have psql and ssh, check writability
+                    return return_dict(False, "master is down", issues)
+        # if we have psql, check writability
         else:
             mcur = mconn.cursor()
             # check that you can do a simple write
@@ -445,53 +458,82 @@ class HandyRep(Object):
                 return return_dict(False, "master is running by writes are frozen")
             # return success,
             mconn.disconnect()
-            self.status_update(master, "healthy", "passed verification check")
+            if issues:
+                self.status_update(master, "warning", "passed verification check but no SSH access", issues)
+            else:
+                self.status_update(master, "healthy", "passed verification check")
             return return_dict(True, "master OK")
 
     def verify_replica(self, replicaserver):
-        # replica verification for when the whole server
+        # replica verification for when the whole cluster
         # is running.  not for when in a failover state;
         # then you should use check_replica instead
-        # returns status information:
+        issues = {}
+        if replicaserver not in self.servers:
+            return return_dict(False, "Server %s not found in configuration" % replicaserver)
+        
+        if not self.test_ssh(replicaserver):
+            self.status_update(replicaserver, "warning","cannot SSH to server")
+            issues["ssh"] = "cannot SSH to server"
+        
         try:
             rconn = self.connection(replicaserver)
         except Exception as e:
-            log_activity("Connection to replica %s failed %s" % (replicaserver, e.message,), True)
-            self.servers[replicaname]["status"] = "unavailable"
-            return False
+            self.status_update(replicaserver, "warning", "cannot psql to server")
+            issues["psql"] = "cannot psql to server"
+
+        # if we had any issues connecting ...
+        if "ssh" in issues and "psql" in issues:
+            self.status_update(replicaserver, "unavailable", "psql and ssh both failing")
+            return returndict(False, "server not responding", issues)
+        # if we have ssh but not psql, see if we can check if pg is running
+        elif "ssh" not in issues and "psql" in issues:
+            # try polling first, maybe master is just full up on connections
+            if succeeded(poll_replica(replicaserver)):
+                self.status_update(replicaserver, "warning", "server running but we cannot connect")
+                return return_dict(True, "server running but we cannot connect", issues)
+            else:
+                # ok, let's ssh in and see if we can psql
+                checkpg = pg_service_status(replicaserver)
+                if succeeded(checkpg):
+                    # postgres is up, just misconfigured
+                    self.status_update(replicaserver, "warning", "server running but we cannot connect")
+                    return return_dict(True, "server running but we cannot connect", issues)
+                else:
+                    self.status_update(replicaserver, "down", "server is down")
+                    return return_dict(False, "server is down", issues)
+                
+        # if we have psql, check replication status
+        else:
         # check that it's in replication
-        rcur = rconn.cursor()
-        if not self.is_replica(rcur):
+            rcur = rconn.cursor()
+            isrep = self.is_replica(rcur)
             rconn.disconnect()
-            self.servers[replicaname]["status"] = "non-replica"
-            return False
-        rconn.disconnect()
-        # check that it's seen from master
-        # this will error out if we can't reach the
-        # master
-        mconn = self.master_connection()
-        mcur = mconn.cursor()
+            if not isrep:
+                self.status_update(replicaserver, "warning", "replica is running but is not in replication")
+                return return_dict(False, "replica is not in replication")
         # poll the replica status table
         # which lets us know status and lag
-        repinfo = self.hr_function(mcur, """handyrep_replica_status(%s)""",(replicaserver,))
-        mconn.disconnect()
-        if not repinfo:
-            self.servers[replicaname]["status"] = "disconnected"
-            return False
+        repstatus = self.get_plugin("replication_status")
+        repinfo = repstatus(replicaserver, "master")
+        # if the above fails, we can't connect to the master
+        if failed(repinfo):
+            self.status_update(replicaserver, "warning", "cannot check replication status on master")
+            return return_dict(True, "cannot check replication status on master")
         # check replica lag
-        self.servers[replicaname]["lag_mb"] = repinfo[3]
-        if repinfo[3] > self.servers[replicaname]["lag_limit"]:
-            self.servers[replicaname]["status"] = "lagged"
-            return False
+        if repinfo["lag_mb"] > self.servers[replicaname]["lag_limit"]:
+            self.status_update(replicaserver, "lagged", "lagging %d MB" % repinfo["lag_mb"])
+            return return_dict(True, "replica is lagged but running")
         else
-            self.servers[replicaname]["status"] = "healthy"
-            return True
         # otherwise, return success
+            self.status_update(replicaserver, "healthy", "replica is all good")
+            return return_dict(True, "replica OK")
 
     def verify_server(self, servername):
         if not self.servers[servername]["enabled"]:
-            # disabled servers always return False
-            return False
+            # disabled servers always return success
+            # after all, they're supposed to be disabled
+            return return_dict(True, "server disabled")
             
         if self.servers[servername]["role"] == "master":
             return self.verify_master()
@@ -501,53 +543,74 @@ class HandyRep(Object):
     def verify_all(self):
         # verify all servers, preparatory to listing
         # information
-        # returns True if all servers OK, False if not
-        verification = True
+        # returns success unless the master is down
+        vertest = return_dict(False, "no master found")
+        master_count = 0
         for server, servdetail in self.servers.iteritems():
             if servdetail["enabled"]:
                 if servdetail["role"] == "master":
-                    if not self.verify_master():
-                        verification = False
+                    mcheck = self.verify_master()
+                    master_count += 1
+                    if succeeded(mcheck):
+                        vertest.update({ "result" : "SUCCESS",
+                            "details" : "master check passed"
+                            server : mcheck })
+                    else:
+                        vertest.update({ "result" : "FAIL",
+                            "details" : "master check failed"
+                            server : mcheck })
                 else:
-                    if not self.verify_replica(server):
-                        verification = False
-        # update status
-        if verification:
-            self.status_update(
-        # save all data
-        self.write_servers()
-        # always returns true
-        return verification
+                    vertest[server] = verify_server(server)
+
+        # check masters
+        if master_count == 0:
+            self.status_no_master()
+            vertest.update(return_dict(False, "No configured master found"))
+        elif master_count > 1:
+            # we don't allow more than one master
+            self.cluster_status_update("down", "Multiple master servers found")
+            vertest.update(return_dict(False, "Multiple masters found"))
+
+        return vertest
 
     def check_replica(self, replicaserver):
-        # replica verification
-        # prior to failover
+        # replica check prior to failover
         # checks the replicas and sees if they're lagged
         # without connecting to the master
+        # this is mostly like verify_replica, except
+        # that failure criteria are different
+        # if we can't psql, ssh, and confirm that it's
+        # in replication, fail.
+        # also return lag status
+        
+        # test control access
+        checkpg = pg_service_status(replicaserver)
+        if failed(checkpg):
+            # update status if server not already down
+            if self.servers[replicaserver]["status_no"] < 4:
+                self.status_update(replicaserver, "warning", "no control connection to server")
+            return return_dict(False, "no control connection to server")
+        
+        # test psql access
         try:
             rconn = self.connection(replicaserver)
         except Exception as e:
-            log_activity("Connection to replica %s failed %s" % (replicaserver, e.message,), True)
-            self.servers[replicaname]["status"] = "unavailable"
-            return False
+            # update status if not already down
+            if self.servers[replicaserver]["status_no"] < 4:
+                self.status_update(replicaserver, "warning", "cannot psql to server")
+            return return_dict(False, "cannot psql to server")
+
         # check that it's in replication
         rcur = rconn.cursor()
-        if self.is_replica(rcur):
-            # update lag status
-            repinfo = self.hr_function("handyrep_replica_lag")
-            rconn.disconnect()
-            self.servers[replicaname]["lag_mb"] = repinfo[3]
-            if repinfo[3] > self.servers[replicaname]["lag_limit"]:
-                self.servers[replicaname]["status"] = "lagged"
-                # a lagged server is still useful
-                return True
-            else
-                self.servers[replicaname]["status"] = "healthy"
-                return True
-        else:
-            rconn.disconnect()
-            self.servers[replicaname]["status"] = "non-replica"
-            return False
+        isrep = self.is_replica(rcur)
+        rconn.disconnect()
+        if not isrep:
+            self.status_update(replicaserver, "warning", "server is not in replication")
+            return return_dict(False, "server not in replication")
+        # looks like we're good
+        # we're not going to check lag status, because
+        # that's presumed to be part of the replica selection
+        return return_dict(True, "replica OK")
 
     def is_master(self, servername):
         if self.servers[servername]["role"] == 'master' and self.servers[servername]["enabled"]:
@@ -555,31 +618,47 @@ class HandyRep(Object):
         else:
             return False
 
+    def is_available(self, servername):
+        return ( self.servers[servername]["enabled"] and self.servers[servername]["status_no"] < 4 )
+            
+
     def failover_check(self, verify=False):
-        # check if we're the hr master:
-        if not self.check_hr_master():
-            return "Not Handyrep Master"
-        # poll master
-        for checknum in range(1,self.conf["failover"]["fail_retries"] + 1)
-            if verify:
-                result = self.verify_master()
+        # core function of handyrep
+        # periodic check of the master
+        # to see if we need to initiate failover
+        # if auto-failover
+        # check if we're the hr master
+        if failed(self.check_hr_master()):
+            # we're not the master, return success
+            # and don't do anything
+            return return_dict(True, "not the current HR master, ignore")
+            
+        # if not verify, try polling the master first
+        # otherwise go straight to verify
+        if verify:
+            if failed(self.poll_master()):
+                mcheck = self.verify_master()
             else:
-                result = self.poll_master()
-            if result:
-                break
-        # if failed, failover
-        if not result:
-            self.status = "down"
-            # try to restart the master if configured
-            if self.conf["failover"]["restart_master"]:
-                if self.restart_master():
-                    self.status = "OK"
-                    return "OK"
-            failres = self.failover()
-            return failres
-        # return
-        self.status = "OK"
-        return "OK"
+                return return_dict(True, "master OK")
+        else:
+            mcheck = self.verify_master()
+
+        if failed(mcheck):
+            # check if we have control access
+            if not "ssh" in mcheck:
+                # maybe restart it?  depends on config
+                if self.conf["failover"]["restart_master"]:
+                    if succeeded(self.restart_master()):
+                        return return_dict(True, "master restarted")
+                
+            # otherwise, check if autofailover is configured
+            if self.conf["failover"]["auto_failover"]:
+                failit = self.auto_failover()
+                if succeeded(failit):
+                    return return_dict(True, "failed over to new master")
+                else:
+                    return return_dict(False, "master down, failover failed")
+            
 
     def pg_service_status(self, servername):
         # check the service status on the master
@@ -591,164 +670,168 @@ class HandyRep(Object):
         # master server
         master = self.get_master_name()
         restart_cmd = self.get_plugin(self.servers[master]["restart_method"])
-        if restart_cmd(self.conf, self.servers):
+        restart_result = restart_cmd.run(master, "restart")
+        if suceeded(restart_result):
             # wait recovery_wait for it to come up
             tries = (self.conf["failover"]["recovery_retries"])
             for mpoll in range(1,tries):
                 if poll(master):
-                    self.servers[master]["status"] = "healthy"
-                    self.write_servers()
-                    return True
+                    self.status_update(master, "healthy", "restarted successfully")
+                    return return_dict(True, "restarted master successfully")
                 else:
                     time.sleep(self.conf["failover"]["fail_retry_interval"])
-                    
-        self.servers[master]["status"] = "down"
-        self.write_servers()
-        return False
+        # no success yet?  then we're down
+        self.status_update(master, "down", "unable to restart master")
+        return return_dict(False, "unable to restart master")
 
-    def auto_failover(self, newmaster=None, remaster=None):
-        # if newmaster isnt set, poll replicas for new master
-        # according to selection_method
+    def auto_failover(self):
         oldmaster = self.get_master_name()
-        oldstatus = self.status
-        self.status_update("failing over","Began failover")
+        oldstatus = self.status["status"]
+        self.cluster_status_update("warning","failing over")
+        # poll replicas for new master
+        # according to selection_method
         if not newmaster:
             # returns a list of potential new masters
             # this step should check all of them
             replicas = self.select_new_master()
             if not replicas:
                 # no valid masters found, abort
-                self.status_update(oldstatus,"No viable replicas found, aborting failover", "FAILOVER")
-                return False
-        else:
-            if check_replica(newmaster):
-                replicas = [newmaster,]
-            else:
-                self.status_update(oldstatus,"Designated new master is not working", "FAILOVER")
-                return False
-        # if remaster not set, get from settings
-        if not remaster:
-            remaster = self.conf["failover"]["remaster"]
+                self.cluster_status_update(oldstatus,"No viable replicas found, aborting failover")
+                self.log("FAILOVER","Unable to fail over, no viable replicas", True, "CRITICAL")
+                return return_dict(False, "Unable to fail over, no viable replicas")
+            
+        # find out if we're remastering
+        remaster = self.conf["failover"]["remaster"]
         # attempt STONITH
-        if not self.shutdown_old_master(oldmaster):
+        if failed(self.shutdown_old_master(oldmaster)):
             # if failed, try to rewrite connections instead:
-                if self.conf["failover"]["connection_failover"] and self.connection_failover(replicas[0]):
-                    self.servers[oldmaster]["status"] = "unavailable"
+                if self.conf["failover"]["connection_failover"]:
+                    if succeeded(self.connection_failover(replicas[0])):
+                    self.status_update(oldmaster, "unavailable", "old master did not shut down, changed connection config")
                     # and we can continue
-                else:
+                    else:
                     # we can't shut down the old master, reset and abort
-                    self.connection_failover()
-                    self.status_update(oldstatus, "Unable to shut down old master", "FAILOVER")
-                    return False
-            #raise CustomError("FAILOVER","Unable to shut down old master, aborting")
+                        self.connection_failover(oldmaster)
+                        self.log("FAILOVER", "Could not shut down old master, aborting failover", True, "CRITICAL")
+                        self.cluster_status_update(oldstatus, "Failover aborted: Unable to shut down old master")
+                        return return_dict(False, "Failover aborted, shutdown failed")
+                else:
+                    self.log("FAILOVER", "Could not shut down old master, aborting failover", True, "CRITICAL")
+                    self.cluster_status_update(oldstatus, "Failover aborted: Unable to shut down old master")
+                    return return_dict(False, "Failover aborted, shutdown failed")
+
         # attempt replica promotion
         for replica in replicas:
-            if self.promote(replica):
-            # if success, update servers.save
-                self.status = 'OK'
-                # if remastering, attempt to remaster
-                if remaster:
-                    for servername, servinfo in self.servers.keys():
-                        if servinfo["role"] == "replica" and servinfo["enabled"]:
-                            self.remaster(servname, newmaster)
-                # fail over connections:
-                if self.connection_failover():
-                    # run post-failover scripts
-                    # we don't check the result because
-                    # this isn't part of the workflow
-                    self.postfailover_scripts()
-                    self.status_message = "Failed over to new master %s" % replica
-                    return True
-                else:
-                    # augh.  promotion succeeded but we can't fail over
-                    # the connections.  abort
-                    self.status_update("down","DB connections are not failed over to new master", "FAILOVER")
-                    return False
-            else:
-                # try another replica
-                continue
+            if succeeded(check_replica(replica)):
+                if self.promote(replica):
+                # if success, update servers.save
+                    self.status = 'OK'
+                    # if remastering, attempt to remaster
+                    if remaster:
+                        for servername, servinfo in self.servers.keys():
+                            if servinfo["role"] == "replica" and servinfo["enabled"]:
+                                # don't check result, we do that in
+                                # the remaster procedure
+                                self.remaster(servname, newmaster)
+                    # fail over connections:
+                    if succeeded(self.connection_failover()):
+                        # run post-failover scripts
+                        # we don't fail back if they fail, though
+                        if failed(self.postfailover_scripts()):
+                            self.cluster_status_update("warning","postfailover commands failed")
+                            return(True, "Failed over, but postfailover scripts did not succeed")
+                    else:
+                        # augh.  promotion succeeded but we can't fail over
+                        # the connections.  abort
+                        self.log("FAILOVER","Promoted new master but unable to fail over connections", True, "CRITICAL")
+                        self.cluster_status_update("down","Promoted new master but unable to fail over connections")
+                        return return_dict(False, "Promoted new master but unable to fail over connections")
 
         # if we've gotten to this point, then we've failed at promoting
         # any replicas
+        if succeeded(self.restart_master()):
+            self.status_update(oldmaster, "warning", "attempted failover and did not succeed, please check servers")
         else:
-            # if failed, try to abort and reset
-            self.restart_master()
-            self.status_update("down","Unable to promote any replicas", "FAILOVER")
-            return False
+            self.status_update(oldmaster, "down","Unable to promote any replicas")
+        return return_dict(False, "Unable to promote any replicas")
 
-    def manual_failover(self, newmaster, remaster=None):
-        # if newmaster isnt set, poll replicas for new master
-        # according to selection_method
+    def manual_failover(self, newmaster=None, remaster=None):
+        # attempt failover to a replica when requested
+        # by user.  this is a bit different from auto-failover
+        # because it's assumed that we have a known-good state
+        # to revert to
+        # get master name
         oldmaster = self.get_master_name()
-        oldstatus = self.status
-        self.status_update("failing over","Began failover")
+        oldstatus = self[oldmaster]["status"]
+        self.status_update(oldmaster, "warning", "currently failing over")
         if not newmaster:
             # returns a list of potential new masters
             # this step should check all of them
             replicas = self.select_new_master()
             if not replicas:
                 # no valid masters found, abort
-                self.status_update(oldstatus,"No viable replicas found, aborting failover")
-                return False
+                self.log("FAILOVER","No viable new masters found")
+                self.status_update(oldmaster, oldstatus, "No viable replicas found, aborting failover and reverting")
+                return return_dict(False, "No viable replicas found, aborting failover and reverting", True)
         else:
             if check_replica(newmaster):
                 replicas = [newmaster,]
             else:
-                self.status_update(oldstatus,"Designated new master is not working")
-                return False
+                self.log("FAILOVER","New master not operating", True)
+                self.status_update(oldmaster, oldstatus, "New master not viable, aborting failover and reverting")
+                return return_dict(False, "New master not viable, aborting failover and reverting")
         # if remaster not set, get from settings
         if not remaster:
             remaster = self.conf["failover"]["remaster"]
         # attempt STONITH
-        if not self.shutdown_old_master(oldmaster):
+        if failed(self.shutdown_old_master(oldmaster)):
             # we can't shut down the old master, reset and abort
-            self.status_update(oldstatus, "Unable to shut down old master", "FAILOVER")
-            return False
+            if succeeded(self.restart_master()):
+                return return_dict(False, "Unable to shut down old master, aborting and rolling back")
+            else:
+                self.log("FAILOVER","Unable to shut down or restart master", True, "CRITICAL")
+                return return_dict(False, "Unable to shut down or restart old master")
         # attempt replica promotion
         for replica in replicas:
-            if self.promote(replica):
-            # if success, update servers.save
-                self.status = 'OK'
-                # if remastering, attempt to remaster
-                if remaster:
-                    for servername, servinfo in self.servers.keys():
-                        if servinfo["role"] == "replica" and servinfo["enabled"]:
-                            self.remaster(servname, newmaster)
-                # fail over connections:
-                if self.connection_failover():
-                    # run post-failover scripts
-                    # we don't check the result because
-                    # this isn't part of the workflow
-                    self.postfailover_scripts()
-                    self.status_message = "Failed over to new master %s" % replica
-                    return True
-                else:
-                    # augh.  promotion succeeded but we can't fail over
-                    # the connections.  abort
-                    self.status_update("down","DB connections are not failed over to new master", "FAILOVER")
-                    return False
-            else:
-                # try another replica
-                continue
+            if succeeded(check_replica(replica)):
+                if self.promote(replica):
+                # if success, update servers.save
+                    self.status = 'OK'
+                    # if remastering, attempt to remaster
+                    if remaster:
+                        for servername, servinfo in self.servers.keys():
+                            if servinfo["role"] == "replica" and servinfo["enabled"]:
+                                # don't check result, we do that in
+                                # the remaster procedure
+                                self.remaster(servname, newmaster)
+                    # fail over connections:
+                    if succeeded(self.connection_failover()):
+                        # run post-failover scripts
+                        # we don't fail back if they fail, though
+                        if failed(self.postfailover_scripts()):
+                            self.cluster_status_update("warning","postfailover commands failed")
+                            return(True, "Failed over, but postfailover scripts did not succeed")
+                    else:
+                        # augh.  promotion succeeded but we can't fail over
+                        # the connections.  abort
+                        self.log("FAILOVER","Promoted new master but unable to fail over connections", True, "CRITICAL")
+                        self.cluster_status_update("down","Promoted new master but unable to fail over connections")
+                        return False
 
         # if we've gotten to this point, then we've failed at promoting
-        # any replicas
+        # any replicas -- reset an abort
+        if succeeded(self.restart_master("start")):
+            self.status_update(oldmaster, "warning", "attempted failover and did not succeed, please check servers")
         else:
-            # if failed, try to restart the original master
-            # and reset
-            if self.restart_master():
-                self.status_update("OK","Replica promotion failed", "FAILOVER")
-                return False
-            else:
-                self.status_update("down","Unable to promote any replicas", "FAILOVER")
-                return False
+            self.status_update(oldmaster, "down","Unable to promote any replicas")
+        return return_dict(False, "Unable to promote any replicas")
 
     def shutdown_old_master(self, oldmaster):
         # test if we can ssh to master and run shutdown
         if self.shutdown(oldmaster):
             # if shutdown works, return True
-            self.servers[oldmaster]["status"] = "down"
-            return True
+            self.status_update(oldmaster, "down", "Master is shut down")
+            return return_dict(True, "Master is shut down")
         else:
             # we can't connect to the old master
             # by ssh, try PG
@@ -758,75 +841,86 @@ class HandyRep(Object):
             except Exception as e:
             # connection failed, looks like the
             # master is gone
-                self.servers[oldmaster]["status"] = "unavailable"
-                self.servers[oldmaster]["enabled"] = False
-                self.write_servers()
-                return True
-        else:
-            # run shutdown command anyway but don't check the result
-            # this is in case a service has auto-restart
-            self.shutdown(oldmaster)
-            return True
+                self.status_update(oldmaster, "unavailable", "Master cannot be reached for shutdown")
+                return return_dict(True, "master is not responding to connections")
+            else:
+                # we couldn't shut down the master, even
+                # thought we can contact it -- failure
+                self.log("SHUTDOWN","Attempted to shut down master server, shutdown failed", True, "CRITICAL")
+                self.status_update(oldmaster, "warning", "attempted shutdown, master did not respond")
+                return return_dict(False, "Cannot shut down master, postgres still running")
 
     def shutdown(self, servername):
         # shutdown server
         shutdown = self.get_plugin(self.servers["servername"]["restart_method"])
-        shut = shutdown(self.conf, self.servers, servername, "stop")
+        shut = shutdown.run(servername, "stop")
         # poll for shut down
-        if shut:
+        if succeeded(shut):
             # update server info
-            self.servers[servername]["status"] = "down"
-            self.write_servers()
-            return True
+            self.status_update(servername, "down", "server has been shut down")
+            return return_dict(True, "shutdown succeeded")
         else:
-            self.servers[servername]["status"] = "unavailable"
-            self.write_servers()
-            self.status_update(self.status, "Unable to shut down server %s" % servername, "REPLICA")
-            return False
+            
 
     def startup(self, servername)
         # start server
         startup = self.get_plugin(self.servers["servername"]["restart_method"])
-        started = startup(self.conf, self.servers, servername, "start")
+        started = startup.run(servername, "start")
         # poll to check availability
-        if started:
-            if not self.poll(servername):
+        if succeeded(started):
+            if failed(self.poll(servername)):
                 # not available?  wait a bit and try again
                 time.sleep(10)
-                if self.poll(servername):
-                    self.servers[servername]["status"] = "healthy"
-                    return True
+                if succeeded(self.poll(servername)):
+                    self.status_update(servername, "healthy", "server started")
+                    return return_dict(True, "server started")
                 else:
-                    self.servers[servername]["status"] = "down"
-                    return False
+                    self.status_update(servername, "unavailable", "server restarted, but does not respond")
+                    return return_dict(False, "server restarted, but does not respond")
             else:
-                self.servers[servername]["status"] = "healthy"
-                return True
+                self.status_update(servername, "healthy", "server started")
+                return return_dict(True, "server started")
         else:
-            self.servers[servername]["status"] = "down"
-            return False
+            self.status_update(servername, "down", "server does not start")
+            return return_dict(False, "server does not start")
 
     def restart(self, servername)
         # start server
+        # this method is a bit more complex
+        # if restart fails, we see if the server is running, and try
+        # a startup
         startup = self.get_plugin(self.servers["servername"]["restart_method"])
-        started = startup(self.conf, self.servers, servername, "restart")
+        started = startup(servername, "restart")
         # poll to check availability
-        if started:
-            if not self.poll(servername):
+        if failed(started):
+            # maybe we failed because PostgreSQL isn't running?
+            if succeeded(self.poll(servername)):
+                # failed abort
+                # update status if server is known-good
+                if self.servers[servername]["status_no"] < 3:
+                    self.update_status(servername, "warning", "server does not respond to restart commands")
+                return(False, "server does not respond to restart commands")
+            else:
+                # if not running, try a straight start command
+                started = startup(servername, "start")
+
+        if succeeded(started):
+            if failed(self.poll(servername)):
                 # not available?  wait a bit and try again
                 time.sleep(10)
-                if self.poll(servername):
-                    self.servers[servername]["status"] = "healthy"
-                    return True
+                if succeeded(self.poll(servername)):
+                    self.status_update(servername, "healthy", "server started")
+                    return return_dict(True, "server started")
                 else:
-                    self.servers[servername]["status"] = "down"
-                    return False
+                    self.status_update(servername, "unavailable", "server restarted, but does not respond")
+                    return return_dict(False, "server restarted, but does not respond")
             else:
-                self.servers[servername]["status"] = "healthy"
-                return True
+                self.status_update(servername, "healthy", "server started")
+                return return_dict(True, "server started")
         else:
-            self.servers[servername]["status"] = "down"
-            return False
+            self.status_update(servername, "down", "server does not start")
+            return return_dict(False, "server does not start")
+
 
     def get_replicas_by_status(self, repstatus):
         reps = []
@@ -839,33 +933,35 @@ class HandyRep(Object):
     def promote(self, newmaster):
         # send promotion command
         promotion_command = get_plugin(self.servers["newmaster"]["promotion_command"])
-        result = promotion_command(self.conf, self.servers, newmaster)
-        if result:
+        promoted = promotion_command.run(newmaster)
+        if succeeded(promoted):
             # check that we can still connect with the replica, error if not
-            result = False
-            nmconn = self.connection(newmaster)
-            nmcur = nmconn.cursor()
+            promoted = return_dict("False", "promotion failed")
+            try:
+                nmconn = self.connection(newmaster)
+                nmcur = nmconn.cursor()
+            except:
+                # promoted, now we can't connect? oh-oh
+                self.status_update(newmaster, "unavailable", "server promoted, now can't connect")
+                
+                
             # poll for out-of-replication
             for i in range(1,self.conf["failover"]["recovery_retries"]):
                 repstat = self.get_one_value(nmcur, "SELECT pg_is_in_recovery()")
                 if repstat:
                     time.sleep(self.conf["failover"]["fail_retry_interval"])
                 else:
-                    result = True
+                    nmconn.disconnect()
                     self.servers[newmaster]["role"] = "master"
-                    self.servers[newmaster]["status"] = "healthy"
-                    break
+                    self.servers[newmaster]["enabled"] = True
+                    self.status_update(newmaster, "healthy", "promoted to new master")
+                    
+        nmconn.disconnect()
+        # if we get here, promotion failed, better re-verify the server
+        self.verify_replica(newmaster)
+        self.log("FAILOVER","Replica promotion of %s failed" % newmaster)
+        return return_dict(False, "promotion failed")
             
-            nmconn.disconnect()
-        else:
-            # promotion failed, better re-verify the server
-            self.verify_replica(newmaster)
-            self.status_update(self.status, "Promoting replica %s failed" % newmaster, "FAILOVER")
-
-        # update server info
-        self.write_servers()
-        # return success as boolean
-        return result
 
     def get_replica_list(self):
         reps = []
@@ -875,9 +971,6 @@ class HandyRep(Object):
 
     def select_new_master(self):
         # first check all replicas
-        for rep in get_replica_list():
-            self.check_replica(rep)
-
         selection = self.get_plugin(self.conf["failover"]["selection_method"])
         reps = selection(self.conf, self.servers)
         return reps
@@ -887,39 +980,35 @@ class HandyRep(Object):
         if not newmaster:
             newmaster = self.get_master_name()
         # change replica config
-        result = self.push_replica_config(replicaserver, newmaster)
-        if result:
+        remastered = self.push_replica_config(replicaserver, newmaster)
+        if succeeded(result):
             # restart replica
-            restart = self.get_plugin(self.servers[replicaserver]["restart_method"])
-            result = restart(self.conf, self.servers, replicaserver)
-        # check for fail
-        if not result:
-            self.servers[replicaserver]["status"] = "disconnected"
-            # sync server config
-            self.write_servers()
-            log_activity("remastering of replica %s failed" % replicaserver, True)
-
-        return result
+            remastered = self.restart_server(replicaserver)
+            
+        if failed(remastered):
+            self.verify_server(replicaserver)
+            self.log("REMASTER","remastering of server %s failed" % replicaserver, True, "WARNING")
+            return return_dict(False, "remastering failed")
+        else:
+            self.log("REMASTER", "remastered %s" % replicaserver)
+            return return_dict(True, "remastering succeeded")
 
     def add_server(self, servername, *kwargs):
         # add all of the data for a new server
         # hostname is required
         if "hostname" not in (kwargs):
             raise CustomError("USER","Hostname is required for new servers")
-        # assign defaults to everything
-        self.servers[servername] = self.conf["server_defaults"]
-        # now add the arguments
-        for key, setting in kwargs.iteritems():
-            self.servers[servername][key] = setting
         # role defaults to "replica"
         if "role" not in (kwargs):
             self.servers[servername]["role"] = "replica"
         # this server will be added as enabled=False
         self.servers[servername]["enabled"] = False
         # so that we can clone it up later
+        # add rest of settings
+        self.servers[servername] = self.merge_server_settings(servername, kwargs)
         # save everything
         self.write_servers()
-        return True
+        return return_dict(True, "new server saved")
 
     def clone(self, replicaserver, reclone=False clonefrom=None):
         # use config master if not supplied
@@ -927,48 +1016,58 @@ class HandyRep(Object):
             clomaster = clonefrom
         else:
             clomaster = self.get_master_name()
+        # abort if this is the master
+        if replicaserver == self.get_master_name():
+            return return_dict(False, "You may not clone over the master")
         # abort if this is already an active replica
         # and the user didn't call the reclone flag
         if reclone:
-            if not self.shutdown(replicaserver):
-                raise CustomError("REPLICATION","Unable to shut down replica, aborting reclone.","REPLICATION")
-        else:
-            if self.servers[replicaserver]["enabled"] and self.servers[replicaserver]["status"] in ("healthy","lagged")):
-                raise CustomError("USER","You may not clone a running replica.  Try using Reclone instead.")
+            if failed(self.shutdown(replicaserver)):
+                self.log("CLONE","Unable to shut down replica, aborting reclone.", True, "WARNING")
+                # reverify server
+                self.verify_server(replicaserver)
+                return return_dict(False, "Unable to shut down replica")
+        elif self.servers[replicaserver]["enabled"]
+        if self.servers[replicaserver]["enabled"] and self.servers[replicaserver]["status"] in ("healthy","lagged","warning")):
+                return return_dict(False, "Cloning over a running server requires the Reclone flag")
         # clone using clone_method
         clone = self.get_plugin(self.conf[replicaserver]["clone_method"])
-        tryclone = clone(self.conf, self.servers, replicaserver, clomaster)
-        if not tryclone:
-            return False
-        # write recovery.conf
-        self.push_replica_conf(replicaserver)
+        tryclone = clone.run(replicaserver, clomaster)
+        if failed(tryclone):
+            return tryclone
+        # write recovery.conf, assuming it's configured
+        if failed(self.push_replica_conf(replicaserver)):
+            self.log("CLONE","Cloning %s failed" % replicaserver, True)
+            return return_dict(False, "cloning failed")
+        # same for archiving script
+        if failed(self.push_archiving_script(replicaserver)):
+            self.log("CLONE","Cloning %s failed" % replicaserver, True)
+            return return_dict(False, "cloning failed")
         # start replica
-        if self.restart(replicaserver):
+        if succeeded(self.restart(replicaserver)):
             self.servers[replicaserver]["enabled"] = True
-            self.servers[replicaserver]["status"] = "healthy"
-            # update servers.save
-            # report success
-            self.write_servers()
-            return True
+            self.status_update(replicaserver, "healthy", "cloned successfully")
+            self.log("CLONE","Successfully cloned to %s" % replicaserver)
+            return return_dict(True, "cloning succeeded")
         else:
-            self.write_servers()
-            return False
+            self.log("CLONE","Cloning %s failed" % replicaserver, True)
+            return return_dict(False, "cloning failed")
 
     def disable(self, replicaserver):
         # shutdown replica.  Don't check result, we don't really care
         self.shutdown(replicaserver)
         # disable from servers.save
-        self.servers[replicaserver]["status"] = "down"
         self.servers[replicaserver]["enabled"] = False
-        return True
+        self.status_update(replicaserver, "down", "replica server shut down by command")
+        return return_dict(True, "server disabled")
 
     def remove(self, servername):
         # clean no-longer-used serve entry from table
         if self.servers[servername]["enabled"]:
-            raise CustomError("USER","You many not remove a currently enabled server from configuration.")
+            return return_dict(False, "You many not remove a currently enabled server from configuration.")
         else:
             self.servers.pop(servername, None)
-            return True
+            return return_dict(True, "Server removed from configuration")
 
     def get_server_info(self, servername=None, verify=True):
         # returns JSON of all servers
@@ -982,10 +1081,10 @@ class HandyRep(Object):
         if servername:
             # otherwise return just the one
             serv = { servername : self.servers[servername] }
-            return json.dumps(serv)
+            return serv
         else:
             # if all, return all servers
-            return json.dumps(servers)
+            return servers
 
     def get_servers_by_role(self, serverrole, verify=True):
         # roles: master, replica
@@ -999,7 +1098,7 @@ class HandyRep(Object):
         if serverrole = "master":
             master = get_master_name()
             mastdeets = { master, self.servers[master] }
-            return json.dumps(mastdeets)
+            return mastdeets
         else:
             # if replicas, return all running replicas
             reps = {}
@@ -1007,7 +1106,12 @@ class HandyRep(Object):
                 if repdeets["enabled"] and repdeets["role"] == "replica":
                     reps[rep] = repdeets
 
-            return json.dumps(reps)
+            return reps
+
+    def get_cluster_status(self, verify=True):
+        if verify:
+            self.verify_all()
+        return self.status
 
     def merge_server_settings(self, servername, newdict=None):
         # does 3-way merge of server settings:
@@ -1032,26 +1136,6 @@ class HandyRep(Object):
         return statusdef
                     
 
-    def returnjson(self, result, message = None, detaildict=None):
-        jdict = { "result" : result }
-        if message:
-            jdict.update({ "message" : message })
-        if detaildict:
-            jdict.update(detaildict)
-            
-        return json.dumps(jdict)
-
-
-    def jsonfailed(self, jsonresult, successtring="OK"):
-        if jsonresult:
-            jdict = json.reads(jsonresult)
-            if jdict["result"] = successtring:
-                return False
-            else:
-                return True
-        else:
-            return True
-
     def validate_server_settings(self, servername, serverdict=None):
         # check all settings or prospective settings
         # for a server.  in the process, merge changed
@@ -1062,7 +1146,7 @@ class HandyRep(Object):
         # check that we have all required settings
         issues = {}
         if "hostname" not in newdict.keys():
-            return { "result" : "FAIL", "details" : "hostname not provided" }
+            return return_dict(False, "hostname not provided")
         # check ssh
         if not self.test_ssh_host(serverdict):
             issues.update({ "ssh" : "FAIL" })
@@ -1077,37 +1161,54 @@ class HandyRep(Object):
         # not sure how to do this, since we haven't yet merged
         # the changes into .servers
         if not issues:
-            return { "result" : "SUCCESS", "details" : "server verified" }
+            return return_dict(True, "server verified")
         else
-            return issues.update({ "result" : "FAIL", "details" : "verification failed" })
+            return return_dict(False, "verification failed", issues)
 
     def alter_server_def(self, servername, **kwargs):
+        # check for changes to server config which aren't allowed
+        if "role" in kwargs:
+            if kwargs["role"] != self.servers[servername]["role"]:
+                return return_dict(False, "Changes to server role not allowed.  Use promote or relcone instead")
+
+        if "enabled" in kwargs:
+            # if we're disabling the server, that's all we'll do
+            if kwargs["enabled"] and not self.servers[servername]["enabled"]:
+                return self.disable(servername)
+
+        if "status" in kwargs or "status_no" in kwargs:
+            return return_dict(False, "You may not manually change server status")
+                
         # verify servers
         # validate new settings
         valids = self.validate_server_settings(servername, kwargs)
         if self.failed(valids):
-            valids.update({ "result" : "FAIL", "details" : "server validation failed" })
+            valids.update(return_dict(False, "server validation failed"))
             return valids
         # merge and sync server config
         self.servers[servername] = self.merge_server_settings(servername, kwargs)
         self.write_servers()
         # exit with success
-        return { "result" : "SUCCESS" }
+        return return_dict(True, "Server definition changed", self.servers[servername])
 
     def clean_archive(self, expire_hours=None):
         # are we archiving?
         archiveinfo = self.conf["archive"]
+        if expire_hours:
+            exphours = expire_hours
+        else
+            exphours = self.conf["archive"]["archive_delete_hours"]
+        # are we archving?
         if not archiveinfo["archiving"]:
-            return { "result" : "SUCCESS",
-                "details" : "archiving disabled" }
+            return return_dict(True, "archiving disabled")
         # are we deleting?
-        if not archiveinfo["archive_delete_hours"]:
-            return { "result" : "SUCCESS",
-                "details" : "cleanup disabled" }
+        if not exphours:
+            return return_dict(True, "archive cleanup disabled")
+        
         # delete files from archive which are older
         # than setting using the plugin method
-        archrun = get_plugin(archiveinfo["archive_method"])
-        return archrun.run()
+        archrun = get_plugin(archiveinfo["archive_delete_method"])
+        return archrun.run(expire_hours)
 
     def push_replica_conf(self, replicaserver):
         # write new recovery.conf per servers.save
@@ -1135,18 +1236,20 @@ class HandyRep(Object):
             upload_template( rectemp, servconf["replica_conf"], use_jinja=True, context=recparam, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, mode=700)
             sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_user"], servconf["replica_conf"] )
         except:
-            retdict = { "result" : "FAIL", "details" : "could not push new archive.sh executable" }
-        else:
-            retdict = { "result" : "SUCCESS", "details" : "pushed new archive.sh executable" }
-        finally:
             disconnect_all()
+            self.status_update(replicaserver, "warning", "could not change configuration file")
+            return return_dict(False, "could not push new replication configuration")
+        
+        disconnect_all()
 
-        # restart the replica
-        if self.failed(self.restart(replicaserver)):
-            retdict.update({ "result" : "FAIL",
-                "details" : "could not restart server"})
+        # restart the replica if it was running
+        if is_available(replicaserver):
+            if failed(self.restart(replicaserver)):
+                self.status_update(replicaserver, "warning", "changed config but could not restart server")
+                return return_dict(False, "changed config but could not restart server"})
 
-        return retdict
+        self.log("CONFIG","Changed configuration for %s" % replicaserver)
+        return return_dict(True, "pushed new replication configuration")
         
 
     def push_archive_script(self, servername):
@@ -1176,14 +1279,66 @@ class HandyRep(Object):
             upload_template( archtemp, archconf["archive_bin"], use_jinja=True, context=archconf, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, mode=755)
             sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_user"], archconf["archive_bin"] )
         except:
-            retdict = { "result" : "FAIL", "details" : "could not push new archive.sh executable" }
+            retdict = return_dict(False, "could not push new archive.sh executable")
         else:
-            retdict = { "result" : "SUCCESS", "details" : "pushed new archive.sh executable" }
+            retdict = return_dict(True, "pushed new archive.sh executable")
         finally:
             disconnect_all()
             
         return retdict
-            
+
+    def connection_failover(self, newmaster):
+        # fail over connections as part of
+        # automatic or manual failover
+        # returns success if not configured
+        confail_name = self.conf["failover"]["connection_failover_method"]
+        if confail_name:
+            confail = get_plugin(confail_name)
+            confailed = confail.run(newmaster)
+            if succeeded(confailed):
+                self.log("FAILOVER","Connections failed over to new master %s" % newmaster)
+            else:
+                self.log("FAILOVER","Could not fail over new connections to new master %s" % newmaster, True, "WARNING")
+            return confailed
+        else:
+            return return_dict(True, "no connection failover configured")
+
+    def connection_proxy_init(self):
+        # initialize connection configuration
+        # as part of initial setup
+        # requires connection failover to be set up in the first place
+        # returns success if not configured in order to
+        # avoid errors on automated processses
+        confail_name = self.conf["failover"]["connection_failover_method"]
+        if confail_name:
+            confail = get_plugin(confail_name)
+            confailed = confail.init()
+            if succeeded(confailed):
+                self.log("FAILOVER","Initialized connection proxy configuration")
+            else:
+                self.log("FAILOVER","Could not initialize connection configuration", True)
+            return confailed
+        else:
+            return return_dict(True, "no connection failover configured")
+
+    def extra_failover_commands(self):
+        # runs extra commands after failover, based on
+        # the new server configuration
+        # output of these commands is logged, but
+        # no action is taken if they fail
+        some_failed = False
+        for fcmd, fdeets in self.conf["extra_failover_commands"].iteritems():
+            failcall = self.get_plugin(fdeets["command"])
+            failres = failcall.run(*fdeets["parameters"])
+            if failed(failres):
+                some_failed = True
+                self.log("FAILOVER","Post-failover command %s failed with error %s" % (fcmd, failres["details"],),True, "WARNING")
+
+        if some_failed:
+            return return_dict(False, "One or more post-failover commands failed")
+        else:
+            return return_dict(True, "Post-failover commands executed")
+        
 
     def update_archive_location(self):
         # pushes a new archive location to all servers
@@ -1264,7 +1419,7 @@ class HandyRep(Object):
         try:
             conn = psycopg2.connect( connect_string )
         except:
-            raise CustomError("DBCONN","ERROR: Unable to connect to Postgres using the connections string %s" % connect_string)
+            raise CustomError("DBCONN","ERROR: Unable to connect to Postgres using the connections string %s" % connect_string) 
 
         if "autocommit" in kwargs:
             if kwargs["autocommit"]:
@@ -1280,7 +1435,7 @@ class HandyRep(Object):
 
         return reptest
 
-    def master_connection(self, autocommit=False):
+    def master_connection(self, mautocommit=False):
         # connect to the master.  if unable to
         # or if it's not really the master, fail
         master = self.get_master_name()
@@ -1288,7 +1443,7 @@ class HandyRep(Object):
             raise CustomError("CONFIG","No master server found in server configuration")
         
         try:
-            mconn = self.connection(master, autocommit=False)
+            mconn = self.connection(master, autocommit=mautocommit)
         except:
             raise CustomError("DBCONN","Unable to connect to configured master server.")
 

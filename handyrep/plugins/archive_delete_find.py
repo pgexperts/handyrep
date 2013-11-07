@@ -4,6 +4,8 @@
 from plugins.handyrepplugin import HandyRepPlugin
 
 class archive_delete_find(HandyRepPlugin):
+    # plugin to delete old archive files from a shared archive
+    # using linux "find" command
 
     def run(self):
         archiveinfo = self.conf["archive"]
@@ -16,5 +18,5 @@ class archive_delete_find(HandyRepPlugin):
             return adelete.update( "details" : "archive cleaning failed due to error: %s", adelete["details"])
 
     def test(self, conf, servers, servername):
-        # not implemented yet
+        
         return { "result" : "SUCCESS" }
