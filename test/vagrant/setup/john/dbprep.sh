@@ -28,6 +28,6 @@ su - postgres -c "/usr/bin/pg_ctl -D /var/lib/postgresql/9.3/main start"
 
 # load the libdata database
 psql -U postgres -f /setup/john/postgres/users.sql postgres
-#pg_restore -e -U postgres -d libdata /setup/postgres/libdata.dump
+pg_restore -e -U postgres -d libdata /setup/postgres/libdata.dump
 
 exit 0

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-/setup/paul/dbprep.sh
+/setup/george/dbprep.sh
 
 echo ''
 echo 'vagrant loaded and ready for tutorial'

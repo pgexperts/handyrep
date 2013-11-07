@@ -3,8 +3,8 @@ require 'ipaddr'
 VAGRANTFILE_API_VERSION = "2"
 CONFIGURATION = {
   domain: 'test.com',
-  box: 'precise64.box',
-  box_url: 'http://files.vagrantup.com/precise64.box',
+  box: 'handyrep',
+  box_url: 'https://dl.dropboxusercontent.com/u/5132935/handyrep.box',
   starting_ip_address: '192.168.199.201',
   vms: [
     {
@@ -22,6 +22,14 @@ CONFIGURATION = {
       install_master: false,
       memory: 256,
       provision_script: "bootstrap-paul.sh"
+    },
+    {
+      name: :george,
+      primary: false,
+      hostname: 'george',
+      install_master: false,
+      memory: 256,
+      provision_script: "bootstrap-george.sh"
     }
   ]
 }
@@ -60,6 +68,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       vagrant_vm.hostmanager.aliases = ["#{vm[:hostname]}.#{CONFIGURATION[:domain]}"]
 
       config.vm.synced_folder "setup", "/setup"
+      config.vm.synced_folder "handyrep", "/handyrep"
       config.vm.provision :shell, :path => vm[:provision_script]
 
     end

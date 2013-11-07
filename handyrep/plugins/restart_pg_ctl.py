@@ -20,7 +20,7 @@ class restart_pg_ctl(HandyRepPlugin):
         elif runmode == "status":
             return self.status(servername)
         else:
-            return return_dict( False, "unsupported restart mode %s" % runmode }
+            return return_dict( False, "unsupported restart mode %s" % runmode )
 
     def test(self, servername):
         try:
