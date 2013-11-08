@@ -8,12 +8,12 @@ from plugins.handyrepplugin import HandyRepPlugin
 class failplugin(HandyRepPlugin):
 
     # override init so we can capture the plugin name
-    def __init__(self, pluginname)
+    def __init__(self, pluginname):
         self.pluginname = pluginname
         return
 
     def run(self, *args, **kwargs):
-        return return_dict( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )
+        return self.rd( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )
 
     def test(self, *args, **kwargs):
-        return return_dict( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )
+        return self.rd( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )

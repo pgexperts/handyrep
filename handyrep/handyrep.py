@@ -19,13 +19,14 @@ class HandyRep(Object):
     def __init__(config_file='handyrep.conf'):
         # read and validate the config file
         config = ReadConfig(config_file)
-        self.conf = config.read()
+        # need to figure out how to set the location for
+        self.conf = config.read('config/handyrep-validate.conf')
         self.servers = {}
         self.tabname = """ "%s"."%s" """ % (self.conf["handyrep"]["handyrep_schema"],self.conf["handyrep"]["handyrep_table"],)
         self.status = { "status": "unknown",
-            "status_no" = 0,
-            "status_message" = "status not checked yet"
-            "status_ts" = '1970-01-01 00:00:00' }
+            "status_no" : 0,
+            "status_message" : "status not checked yet",
+            "status_ts" : '1970-01-01 00:00:00' }
         self.sync_config(False)
         # return a handyrep object
         return self
@@ -107,7 +108,7 @@ class HandyRep(Object):
         failedcount = 0
         for servname, servinfo in self.servers.iteritems():
             # enabled replicas only
-            if servinfo["role"] = "replica" and servinfo["enabled"]:
+            if servinfo["role"] == "replica" and servinfo["enabled"]:
                 replicacount += 1
                 if servinfo["status_no"] > 3:
                     failedcount += 1
@@ -136,7 +137,7 @@ class HandyRep(Object):
         # if not, update timestamp and exit
         servconf = self.servers[servername]
         if servconf["status"] == newstatus:
-            servconf["status_ts"] = self.self.now_string())
+            servconf["status_ts"] = self.self.now_string()
             return
         # if status has changed, log the vector and quantity of change
         newstatno = self.status_no(newstatus)
@@ -176,10 +177,10 @@ class HandyRep(Object):
     def no_master_status(self):
         # called when we suddenly find that there's no enabled master
         # available
-        self.status.update({ "status" = "down",
-                    "status_no" = 5,
-                    "status_message" = "no configured and enabled master found"
-                    "status_ts" = now_string})
+        self.status.update({ "status" : "down",
+                    "status_no" : 5,
+                    "status_message" : "no configured and enabled master found",
+                    "status_ts" : now_string()})
         self.log("CONFIG","No configured and enabled master found", True, "WARNING")
         return
 
@@ -187,10 +188,10 @@ class HandyRep(Object):
         # called during certain operations
         # such as failover in order to change
         self.log("STATUS", "cluster status changed to %s: %s", newstatus, newstatus_message)
-        self.status.update( "status" = newstatus,
-            "status_no" = self.status_no(newstatus),
-            "status_message" = newstatus_message,
-            "status_ts" = now_string )
+        self.status.update({ "status" : newstatus,
+            "status_no" : self.status_no(newstatus),
+            "status_message" : newstatus_message,
+            "status_ts" : now_string() })
         # don't return anything, we don't check it
         return
 
@@ -198,7 +199,7 @@ class HandyRep(Object):
         # check plugin method to see
         hrs_method = self.get_plugin(self.conf["handyrep"]["master_check_method"])
         # return result
-        hrstatus = hrs_method.run(*self.conf["handyrep"],["master_check_parameters"])
+        hrstatus = hrs_method.run(*self.conf["handyrep"]["master_check_parameters"])
         return hrstatus
 
     def verify_servers(self, update_defs = True):
@@ -208,10 +209,10 @@ class HandyRep(Object):
         for someserver, servdetails in self.servers.iteritems():
             if servdetails["enabled"]:
                 if servdetails["role"] == "master":
-                    if not verify_master(someserver):
+                    if not self.verify_master(someserver):
                         allgood = False
                 else:
-                    if not verify_replica(someserver)
+                    if not self.verify_replica(someserver):
                         allgood = False
             # return false if serverdefs don't match
             # success otherwise
@@ -226,6 +227,10 @@ class HandyRep(Object):
             serverdata = json.load(servfile)
             servfile.close()
             return serverdata
+
+    def failwait(self):
+        time.sleep(self.conf["failover"]["fail_retry_interval"])
+        return
 
     def init_handyrep_db(self):
         # initialize the handrep schema
@@ -281,15 +286,15 @@ class HandyRep(Object):
                 if serverdata:
                     if servfiledate > dbconf[0]:
                         use_conf = "file"
-                    elif servfiledate < dbconf[0]
+                    elif servfiledate < dbconf[0]:
                         use_conf = "db"
-                else
+                else:
                     use_conf = "db"
             else:
                 if serverdate:
                     use_conf = "file"
         # by now, we should know which one to use:
-        if use_conf = "conf":
+        if use_conf == "conf":
             # merge server defaults and server config
             for server in self.conf["servers"].keys():
                 # set self.servers to the merger of settings
@@ -298,13 +303,13 @@ class HandyRep(Object):
             # populate self.status
             self.status = self.clusterstatus()
 
-        elif use_conf = "file":
+        elif use_conf == "file":
             # set self.servers to the file data
             self.servers = serverdata["servers"]
             # set self.status from the file
             self.status = serverdata["status"]
             
-        elif use_conf = "db":
+        elif use_conf == "db":
             # set self.servers to servers field
             self.servers = dbconf[2]
             # set self.status to status field
@@ -344,15 +349,15 @@ class HandyRep(Object):
             scur = sconn.cursor()
             dbconf = get_one_row(scur,"""SELECT * FROM %s """ % self.tabname)
             if dbconf:
-                if dbconf[0] < self.serv_updated
-                try:
-                    cur.execute("UPDATE " + tabname + """ SET updated = %s,
-                    config = %s, servers = %s, status = %s""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),json.dumps(self.status),))
-                except Exception as e:
-                        # something else is wrong, abort
-                    sconn.disconnect()
-                    self.log("DBCONN","Unable to write HandyRep table to database for unknown reasons, please fix: %s" % e.pgerror, True)
-                    return False
+                if dbconf[0] < self.serv_updated:
+                    try:
+                        cur.execute("UPDATE " + tabname + """ SET updated = %s,
+                        config = %s, servers = %s, status = %s""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),json.dumps(self.status),))
+                    except Exception as e:
+                            # something else is wrong, abort
+                        sconn.disconnect()
+                        self.log("DBCONN","Unable to write HandyRep table to database for unknown reasons, please fix: %s" % e.pgerror, True)
+                        return False
             else:
                 self.init_handyrep_db()
             sconn.commit()
@@ -524,7 +529,7 @@ class HandyRep(Object):
         if repinfo["lag_mb"] > self.servers[replicaname]["lag_limit"]:
             self.status_update(replicaserver, "lagged", "lagging %d MB" % repinfo["lag_mb"])
             return return_dict(True, "replica is lagged but running")
-        else
+        else:
         # otherwise, return success
             self.status_update(replicaserver, "healthy", "replica is all good")
             return return_dict(True, "replica OK")
@@ -553,11 +558,11 @@ class HandyRep(Object):
                     master_count += 1
                     if succeeded(mcheck):
                         vertest.update({ "result" : "SUCCESS",
-                            "details" : "master check passed"
+                            "details" : "master check passed",
                             server : mcheck })
                     else:
                         vertest.update({ "result" : "FAIL",
-                            "details" : "master check failed"
+                            "details" : "master check failed",
                             server : mcheck })
                 else:
                     vertest[server] = verify_server(server)
@@ -635,7 +640,7 @@ class HandyRep(Object):
             
         # if not verify, try polling the master first
         # otherwise go straight to verify
-        if verify:
+        if not verify:
             if failed(self.poll_master()):
                 mcheck = self.verify_master()
             else:
@@ -663,7 +668,7 @@ class HandyRep(Object):
     def pg_service_status(self, servername):
         # check the service status on the master
         restart_cmd = self.get_plugin(self.servers[servername]["restart_method"])
-        return restart_cmd.run("status"))
+        return restart_cmd.run("status")
 
     def restart_master(self):
         # attempt to restart the master on the
@@ -707,7 +712,7 @@ class HandyRep(Object):
             # if failed, try to rewrite connections instead:
                 if self.conf["failover"]["connection_failover"]:
                     if succeeded(self.connection_failover(replicas[0])):
-                    self.status_update(oldmaster, "unavailable", "old master did not shut down, changed connection config")
+                        self.status_update(oldmaster, "unavailable", "old master did not shut down, changed connection config")
                     # and we can continue
                     else:
                     # we can't shut down the old master, reset and abort
@@ -854,15 +859,25 @@ class HandyRep(Object):
         # shutdown server
         shutdown = self.get_plugin(self.servers["servername"]["restart_method"])
         shut = shutdown.run(servername, "stop")
-        # poll for shut down
         if succeeded(shut):
             # update server info
             self.status_update(servername, "down", "server has been shut down")
             return return_dict(True, "shutdown succeeded")
         else:
-            
+            # poll for shut down
+            is_shut = False
+            for i in range(1,self.conf["failover"]["fail_retries"]):
+                self.failwait()
+                if failed(self.poll_server(servername)):
+                    is_shut = True
+                    break
 
-    def startup(self, servername)
+            if is_shut:
+                return return_dict(True, "shutdown succeeded")
+            else:
+                return return_dict(False, "server %s does not shut down" % servername)
+
+    def startup(self, servername):
         # start server
         startup = self.get_plugin(self.servers["servername"]["restart_method"])
         started = startup.run(servername, "start")
@@ -884,7 +899,7 @@ class HandyRep(Object):
             self.status_update(servername, "down", "server does not start")
             return return_dict(False, "server does not start")
 
-    def restart(self, servername)
+    def restart(self, servername):
         # start server
         # this method is a bit more complex
         # if restart fails, we see if the server is running, and try
@@ -1010,7 +1025,7 @@ class HandyRep(Object):
         self.write_servers()
         return return_dict(True, "new server saved")
 
-    def clone(self, replicaserver, reclone=False clonefrom=None):
+    def clone(self, replicaserver, reclone=False, clonefrom=None):
         # use config master if not supplied
         if clonefrom:
             clomaster = clonefrom
@@ -1027,8 +1042,8 @@ class HandyRep(Object):
                 # reverify server
                 self.verify_server(replicaserver)
                 return return_dict(False, "Unable to shut down replica")
-        elif self.servers[replicaserver]["enabled"]
-        if self.servers[replicaserver]["enabled"] and self.servers[replicaserver]["status"] in ("healthy","lagged","warning")):
+
+        elif self.servers[replicaserver]["enabled"] and self.servers[replicaserver]["status"] in ("healthy","lagged","warning"):
                 return return_dict(False, "Cloning over a running server requires the Reclone flag")
         # clone using clone_method
         clone = self.get_plugin(self.conf[replicaserver]["clone_method"])
@@ -1095,7 +1110,7 @@ class HandyRep(Object):
             else:
                 self.verify_all()
         # return master if master
-        if serverrole = "master":
+        if serverrole == "master":
             master = get_master_name()
             mastdeets = { master, self.servers[master] }
             return mastdeets
@@ -1162,7 +1177,7 @@ class HandyRep(Object):
         # the changes into .servers
         if not issues:
             return return_dict(True, "server verified")
-        else
+        else:
             return return_dict(False, "verification failed", issues)
 
     def alter_server_def(self, servername, **kwargs):
@@ -1196,7 +1211,7 @@ class HandyRep(Object):
         archiveinfo = self.conf["archive"]
         if expire_hours:
             exphours = expire_hours
-        else
+        else:
             exphours = self.conf["archive"]["archive_delete_hours"]
         # are we archving?
         if not archiveinfo["archiving"]:
@@ -1234,7 +1249,8 @@ class HandyRep(Object):
         # push the config
         try:
             upload_template( rectemp, servconf["replica_conf"], use_jinja=True, context=recparam, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, mode=700)
-            sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_user"], servconf["replica_conf"] )
+            sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_user"], servconf["replica_conf"] ))
+            
         except:
             disconnect_all()
             self.status_update(replicaserver, "warning", "could not change configuration file")
@@ -1246,7 +1262,7 @@ class HandyRep(Object):
         if is_available(replicaserver):
             if failed(self.restart(replicaserver)):
                 self.status_update(replicaserver, "warning", "changed config but could not restart server")
-                return return_dict(False, "changed config but could not restart server"})
+                return return_dict(False, "changed config but could not restart server")
 
         self.log("CONFIG","Changed configuration for %s" % replicaserver)
         return return_dict(True, "pushed new replication configuration")
@@ -1269,7 +1285,7 @@ class HandyRep(Object):
         if archconf["archive_server"]:
             archserv = self.servers[archconf["archive_server"]]
             archconf["archive_host"] = archserv["hostname"]
-        else
+        else:
             archconf["archive_host"] = "localhost"
         env.key_filename = self.servers[servername]["ssh_key"]
         env.user = self.servers[servername]["ssh_user"]
@@ -1277,7 +1293,7 @@ class HandyRep(Object):
         env.host_string = self.servers[servername]["hostname"]
         try:
             upload_template( archtemp, archconf["archive_bin"], use_jinja=True, context=archconf, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, mode=755)
-            sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_user"], archconf["archive_bin"] )
+            sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_user"], archconf["archive_bin"] ))
         except:
             retdict = return_dict(False, "could not push new archive.sh executable")
         else:
@@ -1351,6 +1367,7 @@ class HandyRep(Object):
         # push archive.sh
         # push recovery.conf
         # exit
+        return
 
     def get_plugin(self, pluginname):
         # call method from the plugins class
@@ -1493,7 +1510,7 @@ class HandyRep(Object):
     def test_ssh_newhost(self, hostname, ssh_key, ssh_user ):
         try:
             testit = execute(remote_ls,
-                key_filename = ssh_key
+                key_filename = ssh_key,
                 user = ssh_user,
                 disable_known_hosts = True,
                 hosts = [hostname,])

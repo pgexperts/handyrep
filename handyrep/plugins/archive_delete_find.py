@@ -18,5 +18,5 @@ class archive_delete_find(HandyRepPlugin):
             return adelete.update( "details" : "archive cleaning failed due to error: %s", adelete["details"])
 
     def test(self, conf, servers, servername):
-        
+        # not defined yet
         return { "result" : "SUCCESS" }

@@ -1,8 +1,9 @@
 from fabric.api import sudo, run, env, local, settings
 from fabric.network import disconnect_all
+from fabric.contrib.files import upload_template
 from lib.error import CustomError
 from lib.dbfunctions import get_one_val, get_one_row, execute_it, get_pg_conn
-from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failes, return_dict
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict
 import json
 from datetime import datetime, timedelta
 import logging
@@ -27,9 +28,7 @@ class HandyRepPlugin(object):
         env.user = self.servers[servername]["ssh_user"]
         env.disable_known_hosts = True
         env.host_string = self.servers[servername]["hostname"]
-        rundict = { "result": "SUCCESS"
-            "details" : "no commands provided",
-            "return_code" : None }
+        rundict = return_dict(True, "no commands provided", {"return_code" : None })
         for command in commands:
             try:
                 runit = sudo(command, user=runas, warn_only=True)
@@ -46,15 +45,15 @@ class HandyRepPlugin(object):
                     "return_code" : None }
                 break
         
-        diconnect_all()
+        disconnect_all()
         return rundict
 
     def run_as_postgres(self, servername, commands):
         pguser = self.servers[servername]["postgres_superuser"]
-        return sudorun(servername, commands, pguser)
+        return self.sudorun(servername, commands, pguser)
 
     def run_as_root(self, servername, commands):
-        return sudorun(servername, commands, "root")
+        return self.sudorun(servername, commands, "root")
 
     def run_as_handyrep(self, servername, commands):
         # runs a set of commands as the "handyrep" user
@@ -65,7 +64,7 @@ class HandyRepPlugin(object):
         env.user = self.servers[servername]["ssh_user"]
         env.disable_known_hosts = True
         env.host_string = self.servers[servername]["hostname"]
-        rundict = { "result": "SUCCESS"
+        rundict = { "result": "SUCCESS",
             "details" : "no commands provided",
             "return_code" : None }
         for command in commands:
@@ -91,15 +90,15 @@ class HandyRepPlugin(object):
         # run a bunch of commands on the local machine
         # as the handyrep user
         # exit on the first failure
-        rundict = { "result": "SUCCESS"
+        rundict = { "result": "SUCCESS",
             "details" : "no commands provided",
             "return_code" : None }
         for command in commands:
             try:
                 runit = local(command, capture=True)
-                rundict.update({ "details" : r ,
-                    "return_code" : r.return_code })
-                if r.succeeded:
+                rundict.update({ "details" : runit ,
+                    "return_code" : runit.return_code })
+                if runit.succeeded:
                     rundict.update({"result":"SUCCESS"})
                 else:
                     rundict.update({"result":"FAIL"})
@@ -121,7 +120,7 @@ class HandyRepPlugin(object):
         env.disable_known_hosts = True
         env.host_string = self.servers[servername]["hostname"]
         try:
-            update_template( templatefile, destination, use_jinja=True, context=template_params, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, use_mode=file_mode )
+            upload_template( templatename, destination, use_jinja=True, context=template_params, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, use_mode=file_mode )
             if new_owner:
                 sudo("chown %s %s" % (new_owner, destination,))
         except:
@@ -209,3 +208,35 @@ class HandyRepPlugin(object):
             raise CustomError("DBCONN","Unable to connect to configured master server.")
 
         return mconn
+
+    # the functions below are shell functions for stuff in
+    # misc_utils and dbfunctions  they're created here so that
+    # users don't need to reimport them when writing functions
+
+    def ts_string(self, some_ts):
+        return ts_string(some_ts)
+
+    def string_ts(self, some_string):
+        return string_ts(some_string)
+
+    def now_string(self):
+        return now_string()
+
+    def succeeded(self, retdict);
+        return succeeded(retdict)
+
+    def failed(self, retdict):
+        return failed(retdict)
+
+    def rd(self, success, details, extra):
+        return return_dict(success,details,extra)
+
+    def get_one_val(cur, statement, params=[]):
+        return get_one_val(cur, statement, params)
+
+    def get_one_row(cur, statement, params=[]):
+        return get_one_row(cur, statement, params)
+
+    def execute_it(cur, statement, params=[]):
+        return execute_it(cur, statement, params)
+    

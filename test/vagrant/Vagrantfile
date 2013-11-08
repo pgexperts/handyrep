@@ -4,7 +4,8 @@ VAGRANTFILE_API_VERSION = "2"
 CONFIGURATION = {
   domain: 'test.com',
   box: 'handyrep',
-  box_url: 'https://dl.dropboxusercontent.com/u/5132935/handyrep.box',
+  box_url: '/home/josh/Dropbox/Public/handyrep.box',
+#  box_url: 'https://dl.dropboxusercontent.com/u/5132935/handyrep.box',
   starting_ip_address: '192.168.199.201',
   vms: [
     {

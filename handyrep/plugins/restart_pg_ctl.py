@@ -20,51 +20,51 @@ class restart_pg_ctl(HandyRepPlugin):
         elif runmode == "status":
             return self.status(servername)
         else:
-            return return_dict( False, "unsupported restart mode %s" % runmode )
+            return self.rd( False, "unsupported restart mode %s" % runmode )
 
     def test(self, servername):
         try:
             res = self.status(servername)
         except:
-            return return_dict( False, "test of pg_ctl on server %s failed" % servername)
-        
-        return returndict( True, "test of pg_ctl on server %s passed" % servername)
+            return self.rd( False, "test of pg_ctl on server %s failed" % servername)
+        else:
+            return self.rd( True, "test of pg_ctl on server %s passed" % servername)
 
     def get_pg_ctl_cmd(self, servername, runmode):
         cmd = self.get_conf(self.servers, "restart_parameters", "pg_ctl_path")
         dbloc = self.servers[servername]["pgdata"]
         extra = self.get_conf(self.servers, "restart_parameters", "pg_ctl_flags")
         if cmd:
-            return "%s -D %s %s %s" % (cmd, pgloc, extra, runmode,)
+            return "%s -D %s %s %s" % (cmd, dbloc, extra, runmode,)
         else:
-            return "pg_ctl -D %s %s %s" % (pgloc, extra, runmode,)
+            return "pg_ctl -D %s %s %s" % (dbloc, extra, runmode,)
 
     def start(self, servername):
-        startcmd = get_pg_ctl_cmd(servername, "start")
+        startcmd = self.get_pg_ctl_cmd(servername, "start")
         runit = self.run_as_postgres(servername, [startcmd,])
         return runit
 
     def stop(self, servername):
-        startcmd = get_pg_ctl_cmd(servername, "-m fast stop")
+        startcmd = self.get_pg_ctl_cmd(servername, "-m fast stop")
         runit = self.run_as_postgres(servername, [startcmd,])
         return runit
 
     def faststop(self, servername):
-        startcmd = get_pg_ctl_cmd(servername, "-m immediate stop")
+        startcmd = self.get_pg_ctl_cmd(servername, "-m immediate stop")
         runit = self.run_as_postgres(servername, [startcmd,])
         return runit
 
     def restart(self, servername):
-        startcmd = get_pg_ctl_cmd(servername, "-m fast restart")
+        startcmd = self.get_pg_ctl_cmd(servername, "-m fast restart")
         runit = self.run_as_postgres(servername, [startcmd,])
         return runit
         
     def reloadpg(self, servername):
-        startcmd = get_pg_ctl_cmd(servername, "reload")
+        startcmd = self.get_pg_ctl_cmd(servername, "reload")
         runit = self.run_as_postgres(servername, [startcmd,])
         return runit
 
     def status(self, servername):
-        startcmd = get_pg_ctl_cmd(servername, "status")
+        startcmd = self.get_pg_ctl_cmd(servername, "status")
         runit = self.run_as_postgres(servername, [startcmd,])
         return runit

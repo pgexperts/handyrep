@@ -19,7 +19,7 @@ def get_pg_conn( dbname, **kwargs ):
 
     if not dbname:
         logging.error("No database name supplied")
-        raise CustomErrror("DBCONN","ERROR: a target database is required.")
+        raise CustomError("DBCONN","ERROR: a target database is required.")
 
     connect_string = "dbname=%s " % dbname
 
@@ -123,7 +123,7 @@ def simple_insert_statement ( tablename, coldict ):
     insertstr = "INSERT INTO %s ( %s ) VALUES ( %s ) " % (tablename, insert_col_list(coldict),insert_values_list(coldict),)
     return insertstr
 
-def execute_it(cur, statement, params=[])
+def execute_it(cur, statement, params=[]):
     try:
         cur.execute(statement, params)
     except Exception, e:
@@ -131,7 +131,7 @@ def execute_it(cur, statement, params=[])
         return False
     return True
 
-def get_one_row(cur, query, params=[])
+def get_one_row(cur, statement, params=[]):
     try:
         cur.execute(statement, params)
     except Exception, e:
@@ -139,7 +139,7 @@ def get_one_row(cur, query, params=[])
         return None
     return cur.fetchone()
 
-def get_one_val(cur, query, params=[])
+def get_one_val(cur, statement, params=[]):
     try:
         cur.execute(statement, params)
     except Exception, e:

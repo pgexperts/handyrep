@@ -24,7 +24,7 @@ class ReadConfig(object):
             if not ctest:
                 raise CustomError('CONFIG','Configuration file has bad format or out-of-range values')
 
-        cdict = self.readtypes(config)
+        cdict = self.convertdict(config)
         return cdict
 
     def plainread(self):
@@ -42,6 +42,20 @@ class ReadConfig(object):
         validator = Validator()
         result = config.validate(validator)
         return result
+
+    def convertdict(self, config):
+        # takes a configobj configuration object
+        # and converts it to a dictionary
+        newdict = {}
+        for dkey, dval in config.iteritems():
+            if type(dval) == dict:
+                newdict[dkey] = self.convertdict(dval)
+            elif re.search(r'Section', str(type(dval))):
+                newdict[dkey] = self.convertdict(dval)
+            else:
+                newdict[dkey] = dval
+
+        return newdict
 
     def readtypes(self, cdict):
         # method to read a config dict and

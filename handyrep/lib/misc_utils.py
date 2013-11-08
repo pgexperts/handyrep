@@ -13,7 +13,7 @@ def string_ts(self, some_string):
     except ValueError:
         return None
 
-def now_string(self)
+def now_string(self):
     return ts_string(datetime.now())
 
 def succeeded(resdict):
