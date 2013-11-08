@@ -31,9 +31,9 @@ class restart_pg_ctl(HandyRepPlugin):
             return self.rd( True, "test of pg_ctl on server %s passed" % servername)
 
     def get_pg_ctl_cmd(self, servername, runmode):
-        cmd = self.get_conf(self.servers, "restart_parameters", "pg_ctl_path")
+        cmd = self.get_conf("plugins", "restart_pg_ctl","pg_ctl_path")
         dbloc = self.servers[servername]["pgdata"]
-        extra = self.get_conf(self.servers, "restart_parameters", "pg_ctl_flags")
+        extra = cmd = self.get_conf("plugins", "restart_pg_ctl","pg_ctl_flags")
         if cmd:
             return "%s -D %s %s %s" % (cmd, dbloc, extra, runmode,)
         else:

@@ -1,6 +1,7 @@
 from fabric.api import sudo, run, env, local, settings
 from fabric.network import disconnect_all
 from fabric.contrib.files import upload_template
+from fabric.context_managers import shell_env
 from lib.error import CustomError
 from lib.dbfunctions import get_one_val, get_one_row, execute_it, get_pg_conn
 from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict
@@ -144,6 +145,12 @@ class HandyRepPlugin(object):
                 return None
 
         return myconf
+
+    def pluginconf(self, confkey):
+        # gets the config dictionary for the plugin
+        # or returns an empty dict if none
+        conf = get_conf("plugins",self.__class__.__name__,confkey)
+        return conf
 
     def get_serverinfo(self, *args):
         # a "safe" configuration reader for server configuration
