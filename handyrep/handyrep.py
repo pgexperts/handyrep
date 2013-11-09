@@ -1,4 +1,4 @@
-from fabric.api import execute, sudo, run, env, task
+from fabric.api import execute, sudo, run, env, task, local, settings
 from fabric.network import disconnect_all
 from fabric.contrib.files import upload_template
 from lib.config import ReadConfig

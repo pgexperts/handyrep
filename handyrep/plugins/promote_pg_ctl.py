@@ -1,6 +1,7 @@
-# plugin method for start/stop/restart/reload of a postgresql
-# server using pg_ctl and the data directory
-# also works as a template plugin example
+# plugin method for promoting a replica
+# by running "pg_ctl promote" on the remote server
+# does not do follow-up checks on promotion; those are
+# done by the calling code
 
 from plugins.handyrepplugin import HandyRepPlugin
 
@@ -10,13 +11,12 @@ class promote_pg_ctl(HandyRepPlugin):
         cmd = self.get_conf("plugins", "restart_pg_ctl","pg_ctl_path")
         dbloc = self.servers[servername]["pgdata"]
         extra = cmd = self.get_conf("plugins", "restart_pg_ctl","pg_ctl_flags")
-        if cmd:
-            return "%s -D %s %s %s" % (cmd, dbloc, extra, runmode,)
-        else:
-            return "pg_ctl -D %s %s %s" % (dbloc, extra, runmode,)
+        if not cmd:
+            cmd = "pg_ctl"
+        return "%s -D %s %s %s" % (cmd, dbloc, extra, runmode,)
 
     def run(self, servername):
-        startcmd = self.get_pg_ctl_cmd(servername, "status")
+        startcmd = self.get_pg_ctl_cmd(servername, "promote")
         runit = self.run_as_postgres(servername, [startcmd,])
         return runit
         

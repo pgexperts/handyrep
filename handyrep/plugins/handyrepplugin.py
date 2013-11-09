@@ -30,9 +30,14 @@ class HandyRepPlugin(object):
         env.disable_known_hosts = True
         env.host_string = self.servers[servername]["hostname"]
         rundict = return_dict(True, "no commands provided", {"return_code" : None })
+        pgpasswd = self.conf["handyrep"]["superuser_pass"]
+        if pgpasswd is None:
+            pgpasswd = ""
+
         for command in commands:
             try:
-                runit = sudo(command, user=runas, warn_only=True)
+                with shell_env(PGPASSWORD=pgpasswd):
+                    runit = sudo(command, user=runas, warn_only=True)
                 rundict.update({ "details" : r ,
                     "return_code" : r.return_code })
                 if r.succeeded:
@@ -50,7 +55,7 @@ class HandyRepPlugin(object):
         return rundict
 
     def run_as_postgres(self, servername, commands):
-        pguser = self.servers[servername]["postgres_superuser"]
+        pguser = self.conf["handyrep"]["postgres_superuser"]
         return self.sudorun(servername, commands, pguser)
 
     def run_as_root(self, servername, commands):
@@ -187,9 +192,10 @@ class HandyRepPlugin(object):
         return None
 
     def connection(self, servername, autocommit=False):
+        # connects as the handyrep user to a remote database
         connect_string = "dbname=%s host=%s port=%s user=%s application_name=handyrep " % (self.conf["handyrep"]["handyrep_db"], self.servers[servername]["hostname"], self.servers[servername]["port"], self.conf["handyrep"]["handyrep_user"],)
 
-        if self.conf["handyrep"]["handyrep_pw"]:
+        if self.conf["handyrep"]["handyrep_db_pass"]:
                 connect_string += " password=%s " % self.conf["handyrep"]["handyrep_pw"]
 
         try:
@@ -215,6 +221,21 @@ class HandyRepPlugin(object):
             raise CustomError("DBCONN","Unable to connect to configured master server.")
 
         return mconn
+
+    def failwait(self):
+        time.sleep(self.conf["failover"]["fail_retry_interval"])
+        return
+
+    def sorted_replicas(self, maxstatus=3):
+        # returns a list of currently enabled and running replicas
+        # sorted by failover_priority
+        goodreps = {}
+        for serv, servdeets in self.servers.iteritems():
+            if servdeets["enabled"] and servdeets["status_no"] <= maxstatus:
+                goodreps[serv] = servdeets[failover_priority]
+
+        sreps = sorted(goodreps,key=goodreps.get)
+        return sreps
 
     # the functions below are shell functions for stuff in
     # misc_utils and dbfunctions  they're created here so that
