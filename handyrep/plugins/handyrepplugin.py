@@ -20,7 +20,7 @@ class HandyRepPlugin(object):
         self.servers = servers
         return
 
-    def sudorun(self, servername, commands, runas):
+    def sudorun(self, servername, commands, runas, passwd=""):
         # generic function to run one or more commands
         # as a specific remote user.  returns the results
         # of the last command run.  aborts when any
@@ -30,17 +30,18 @@ class HandyRepPlugin(object):
         env.disable_known_hosts = True
         env.host_string = self.servers[servername]["hostname"]
         rundict = return_dict(True, "no commands provided", {"return_code" : None })
-        pgpasswd = self.conf["handyrep"]["superuser_pass"]
-        if pgpasswd is None:
+        if passwd is None:
             pgpasswd = ""
+        else
+            pgpasswd = passwd
 
         for command in commands:
             try:
                 with shell_env(PGPASSWORD=pgpasswd):
                     runit = sudo(command, user=runas, warn_only=True)
-                rundict.update({ "details" : r ,
-                    "return_code" : r.return_code })
-                if r.succeeded:
+                rundict.update({ "details" : runit ,
+                    "return_code" : runit.return_code })
+                if runit.succeeded:
                     rundict.update({"result":"SUCCESS"})
                 else:
                     rundict.update({"result":"FAIL"})
@@ -56,7 +57,16 @@ class HandyRepPlugin(object):
 
     def run_as_postgres(self, servername, commands):
         pguser = self.conf["handyrep"]["postgres_superuser"]
-        return self.sudorun(servername, commands, pguser)
+        pwd = self.conf["handyrep"]["superuser_pass"]
+        return self.sudorun(servername, commands, pguser, pwd)
+
+    def run_as_replication(self, servername, commands):
+        # we actually use the command-line superuser for this
+        # since the replication user doesn't generally have a shell
+        # account
+        pguser = self.conf["handyrep"]["postgres_superuser"]
+        pwd = self.conf["handyrep"]["replication_pass"]
+        return self.sudorun(servername, commands, pguser, pwd)
 
     def run_as_root(self, servername, commands):
         return self.sudorun(servername, commands, "root")
@@ -76,9 +86,9 @@ class HandyRepPlugin(object):
         for command in commands:
             try:
                 runit = run(command, warn_only=True)
-                rundict.update({ "details" : r ,
-                    "return_code" : r.return_code })
-                if r.succeeded:
+                rundict.update({ "details" : runit ,
+                    "return_code" : runit.return_code })
+                if runit.succeeded:
                     rundict.update({"result":"SUCCESS"})
                 else:
                     rundict.update({"result":"FAIL"})
@@ -114,8 +124,8 @@ class HandyRepPlugin(object):
                     "details" : "connection failure",
                     "return_code" : None }
                 break
-        return rundict
         disconnect_all()
+        return rundict
 
     def push_template(self, servername, templatename, destination, template_params, new_owner=None, file_mode=700):
         # renders a template file and pushes it to the
@@ -154,7 +164,7 @@ class HandyRepPlugin(object):
     def pluginconf(self, confkey):
         # gets the config dictionary for the plugin
         # or returns an empty dict if none
-        conf = get_conf("plugins",self.__class__.__name__,confkey)
+        conf = self.get_conf("plugins",self.__class__.__name__,confkey)
         return conf
 
     def get_serverinfo(self, *args):
@@ -176,12 +186,6 @@ class HandyRepPlugin(object):
         else:
             logging.info("%s: %s" % (category, message,))
         return
-
-    def get_replica_list(self):
-        reps = []
-        reps.append(self.get_replicas_by_status("healthy"))
-        reps.append(self.get_replicas_by_status("lagged"))
-        return reps
 
     def get_master_name(self):
         for servname, servdata in self.servers.iteritems():
@@ -232,10 +236,30 @@ class HandyRepPlugin(object):
         goodreps = {}
         for serv, servdeets in self.servers.iteritems():
             if servdeets["enabled"] and servdeets["status_no"] <= maxstatus:
-                goodreps[serv] = servdeets[failover_priority]
+                goodreps[serv] = servdeets["failover_priority"]
 
         sreps = sorted(goodreps,key=goodreps.get)
         return sreps
+
+    def test_plugin_conf(self, pluginname, *args):
+        # loops through the list of given parameters and
+        # makes sure they all exist and are populated
+        pconf = self.get_conf("plugins",pluginname)
+        if not pconf:
+            return self.rd(False, "configuration for %s not found" % pluginname)
+        
+        missing_params = []
+        for param in args:
+            if param in pconf:
+                if not pconf[param]:
+                    missing_params.append(param)
+            else:
+                missing_params.append(param)
+
+        if len(missing_params) > 0:
+            return self.rd(False, "missing parameters: %s" % ','.join(missing_params))
+        else:
+            return self.rd(True, "config passed")
 
     # the functions below are shell functions for stuff in
     # misc_utils and dbfunctions  they're created here so that

@@ -10,7 +10,7 @@ from plugins.handyrepplugin import HandyRepPlugin
 class poll_isready(HandyRepPlugin):
 
     def get_pollcmd(self, servername):
-        cmd = pluginconf("isready_path")
+        cmd = self.pluginconf("isready_path")
         serv = self.servers[servername]
         if not cmd:
             cmd = "pg_isready"
@@ -20,8 +20,8 @@ class poll_isready(HandyRepPlugin):
         pollcmd = self.get_pollcmd(servername)
         runit = self.run_local(pollcmd)
         # did we have invalid parameters?
-        if succeeded(runint):
-            return self.rd(True, "poll succeeded")
+        if self.succeeded(runit):
+            return self.rd(True, "poll self.succeeded")
         elif runit["return_code"] == 3 or runit["return_code"] is None:
             return self.rd(False, "invalid configuration for pg_isready")
         else:
@@ -31,11 +31,11 @@ class poll_isready(HandyRepPlugin):
             for i in range(1,retries):
                 self.failwait()
                 runit = self.run_local(pollcmd)
-                if succeeded(runit):
-                    return self.rd(True, "poll succeeded")
+                if self.succeeded(runit):
+                    return self.rd(True, "poll self.succeeded")
 
-            # if we've gotten here, then all polls have failed
-            return self.rd(False, "polling failed after %d tries" % retries)
+            # if we've gotten here, then all polls have self.failed
+            return self.rd(False, "polling self.failed after %d tries" % retries)
         
     def test(self):
         # just checks that we can run the poll command, not the result
@@ -45,7 +45,7 @@ class poll_isready(HandyRepPlugin):
             return self.rd(False, "master not configured, aborting")
         pollcmd = self.get_pollcmd(master)
         runit = self.run_local(pollcmd)
-        if succeeded(runit) or if runit["return_code"] in [0,1,2]:
+        if self.succeeded(runit) or runit["return_code"] in [0,1,2]:
             return self.rd(True, "polling works")
         else:
             return self.rd(False, "invalid configuration for pg_isready")

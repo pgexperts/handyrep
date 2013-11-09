@@ -10,12 +10,12 @@ class archive_delete_find(HandyRepPlugin):
     def run(self):
         archiveinfo = self.conf["archive"]
         archiveserver = self.servers[archiveinfo["archive_server"]]
-        find_delete = """find %s -regextype 'posix-extended' -maxdepth 1  -mmin +%d -regex '.*[0-9A-F]{24}' -delete""" % (archiveinfo["archive_directory"],archiveinfo["archive_delete_hours"} * 60,)
+        find_delete = """find %s -regextype 'posix-extended' -maxdepth 1  -mmin +%d -regex '.*[0-9A-F]{24}' -delete""" % (archiveinfo["archive_directory"],archiveinfo["archive_delete_hours"] * 60,)
         adelete = self.sudorun(archiveserver,find_delete,archiveinfo["archive_owner"])
         if self.succeeded(adelete):
             return adelete
         else:
-            return adelete.update( "details" : "archive cleaning failed due to error: %s", adelete["details"])
+            return adelete.update( {"details" : "archive cleaning failed due to error: %s" % adelete["details"]})
 
     def test(self, conf, servers, servername):
         # not defined yet

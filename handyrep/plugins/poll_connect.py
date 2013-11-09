@@ -21,7 +21,7 @@ class poll_connect(HandyRepPlugin):
                 pass
             else:
                 conn.close()
-                return(True, "poll succeeded")
+                return self.rd(True, "poll succeeded")
 
         return(False, "could not connect to server in %d tries" % retries)
         
@@ -33,9 +33,9 @@ class poll_connect(HandyRepPlugin):
         if not master:
             return self.rd(False, "master not configured, aborting")
         try:
-            conn = self.connection(servername)
+            conn = self.connection(master)
         except:
-            return(False, "unable to connect to master for polling")
+            return self.rd(False, "unable to connect to master for polling")
         else:
             conn.close()
-            return(True, "poll succeeded")
+            return self.rd(True, "poll succeeded")
