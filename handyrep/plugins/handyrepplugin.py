@@ -1,7 +1,7 @@
-from fabric.api import sudo, run, env, local, settings
+from fabric.api import sudo, run, env, local, settings, shell_env
 from fabric.network import disconnect_all
 from fabric.contrib.files import upload_template
-from fabric.context_managers import shell_env
+#from fabric.context_managers import shell_env
 from lib.error import CustomError
 from lib.dbfunctions import get_one_val, get_one_row, execute_it, get_pg_conn
 from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict
@@ -32,7 +32,7 @@ class HandyRepPlugin(object):
         rundict = return_dict(True, "no commands provided", {"return_code" : None })
         if passwd is None:
             pgpasswd = ""
-        else
+        else:
             pgpasswd = passwd
 
         for command in commands:
@@ -274,7 +274,7 @@ class HandyRepPlugin(object):
     def now_string(self):
         return now_string()
 
-    def succeeded(self, retdict);
+    def succeeded(self, retdict):
         return succeeded(retdict)
 
     def failed(self, retdict):

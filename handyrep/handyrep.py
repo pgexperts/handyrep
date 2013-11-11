@@ -9,14 +9,13 @@ import logging
 import time
 import importlib
 from plugins.failplugin import failplugin
-import lib.fabric_utils
 from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict
 import psycopg2
 import psycopg2.extensions
 
-class HandyRep(Object):
+class HandyRep(object):
 
-    def __init__(config_file='handyrep.conf'):
+    def __init__(self,config_file='handyrep.conf'):
         # read and validate the config file
         config = ReadConfig(config_file)
         # need to figure out how to set the location for
@@ -601,12 +600,12 @@ class HandyRep(Object):
                     if succeeded(mcheck):
                         vertest.update({ "result" : "SUCCESS",
                             "details" : "master check passed",
-                            "failover_ok" : True
+                            "failover_ok" : True,
                             server : mcheck })
                     else:
                         vertest.update({ "result" : "FAIL",
                             "details" : "master check failed",
-                            "failover_ok" : True
+                            "failover_ok" : True,
                             server : mcheck })
                 elif servdetail["role"] == "replica":
                     vertest[server] = verify_server(server)
@@ -715,7 +714,7 @@ class HandyRep(Object):
                 else:
                     return vercheck.update(return_dict(False, "master down, failover failed"))
             elif not self.conf["failover"]["auto_failover"]:
-                return vercheck.update((return_dict(False, "master down, auto_failover not enabled"))
+                return vercheck.update(return_dict(False, "master down, auto_failover not enabled"))
             else:
                 return vercheck.update(return_dict(False, "master down or split-brain, auto_failover is unsafe"))
         else:
