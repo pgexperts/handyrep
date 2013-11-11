@@ -413,6 +413,45 @@ class HandyRep(Object):
             self.status_update(replicaserver, "unavailable", "server not responding to polling")
         return check
 
+    def poll_all(self):
+        # polls all servers.  fails if the master is
+        # unavailable, doesn't really care about replicas
+        # also returns whether or not it's OK
+        # to fail over, as verify_all does
+        master_count = 0
+        rep_count = 0
+        ret = return_dict(False, "no servers to poll", {"failover_ok" : False})
+        for servname, servdeets in self.servers.iteritems():
+            if servdeets["enabled"]:
+                if servdeets["role"] == "master":
+                    master_count += 1
+                    ret.update(self.poll_master())
+                    ret[servname] = pollrep
+                elif servdeets["role"] == "replica":
+                    pollrep = self.poll_server(servname)
+                    if succeeded(pollrep):
+                        rep_count += 1
+                    ret[servname] = pollrep
+                # other types of servers are ignored
+
+        # check master count
+        if master_count == 0:
+            self.status_no_master()
+            ret.update(return_dict(False, "No configured master found", {"failover_ok": False}))
+        elif master_count > 1:
+            # we don't allow more than one master
+            self.cluster_status_update("down", "Multiple master servers found")
+            ret.update(return_dict(False, "Multiple masters found", {"failover_ok" : False}))
+
+        # do we have any good replicas?
+        if rep_count == 0:
+            ret.update({"details":ret["details"] + " and no working replica found","failover_ok":False})
+
+        return ret
+            
+                    
+                
+
     def verify_master(self):
         # check that you can ssh
         issues = {}
@@ -549,8 +588,11 @@ class HandyRep(Object):
         # verify all servers, preparatory to listing
         # information
         # returns success unless the master is down
+        # also returns failover_ok, which tells us
+        # if there's an OK failover situation
         vertest = return_dict(False, "no master found")
         master_count = 0
+        rep_count = 0
         for server, servdetail in self.servers.iteritems():
             if servdetail["enabled"]:
                 if servdetail["role"] == "master":
@@ -559,22 +601,30 @@ class HandyRep(Object):
                     if succeeded(mcheck):
                         vertest.update({ "result" : "SUCCESS",
                             "details" : "master check passed",
+                            "failover_ok" : True
                             server : mcheck })
                     else:
                         vertest.update({ "result" : "FAIL",
                             "details" : "master check failed",
+                            "failover_ok" : True
                             server : mcheck })
-                else:
+                elif servdetail["role"] == "replica":
                     vertest[server] = verify_server(server)
+                    if succeeded(vertest[server]):
+                        rep_count += 1
 
         # check masters
         if master_count == 0:
             self.status_no_master()
-            vertest.update(return_dict(False, "No configured master found"))
+            vertest.update(return_dict(False, "No configured master found", {"failover_ok": False}))
         elif master_count > 1:
             # we don't allow more than one master
             self.cluster_status_update("down", "Multiple master servers found")
-            vertest.update(return_dict(False, "Multiple masters found"))
+            vertest.update(return_dict(False, "Multiple masters found", {"failover_ok" : False}))
+
+                # do we have any good replicas?
+        if rep_count == 0:
+            vertest.update({"details":ret["details"] + " and no working replica found","failover_ok":False})
 
         return vertest
 
@@ -641,28 +691,35 @@ class HandyRep(Object):
         # if not verify, try polling the master first
         # otherwise go straight to verify
         if not verify:
-            if failed(self.poll_master()):
+            vercheck = self.poll_all()
+            # if the master poll failed, verify the master
+            if failed(vercheck):
                 mcheck = self.verify_master()
-            else:
-                return return_dict(True, "master OK")
+                if succeeded(mcheck):
+                    vercheck.update(return_dict(True, "master poll failed, but master is running"))
         else:
-            mcheck = self.verify_master()
+            vercheck = self.verify_all()
 
-        if failed(mcheck):
-            # check if we have control access
-            if not "ssh" in mcheck:
-                # maybe restart it?  depends on config
-                if self.conf["failover"]["restart_master"]:
-                    if succeeded(self.restart_master()):
-                        return return_dict(True, "master restarted")
-                
+        if failed(vercheck):
+            # maybe restart it?  depends on config
+            if self.conf["failover"]["restart_master"]:
+                if succeeded(self.restart_master()):
+                    return vercheck.update(return_dict(True, "master restarted"))
+            
             # otherwise, check if autofailover is configured
-            if self.conf["failover"]["auto_failover"]:
+            # and if it's OK to failover
+            if self.conf["failover"]["auto_failover"] and vercheck["failover_ok"]:
                 failit = self.auto_failover()
                 if succeeded(failit):
                     return return_dict(True, "failed over to new master")
                 else:
-                    return return_dict(False, "master down, failover failed")
+                    return vercheck.update(return_dict(False, "master down, failover failed"))
+            elif not self.conf["failover"]["auto_failover"]:
+                return vercheck.update((return_dict(False, "master down, auto_failover not enabled"))
+            else:
+                return vercheck.update(return_dict(False, "master down or split-brain, auto_failover is unsafe"))
+        else:
+            return vercheck
             
 
     def pg_service_status(self, servername):
@@ -1047,7 +1104,7 @@ class HandyRep(Object):
                 return return_dict(False, "Cloning over a running server requires the Reclone flag")
         # clone using clone_method
         clone = self.get_plugin(self.conf[replicaserver]["clone_method"])
-        tryclone = clone.run(replicaserver, clomaster)
+        tryclone = clone.run(replicaserver, clomaster, reclone)
         if failed(tryclone):
             return tryclone
         # write recovery.conf, assuming it's configured
