@@ -136,6 +136,23 @@ example:
     
     {'cluster': {u'status': u'warning', u'status_ts': u'2013-11-14 03:57:43', u'status_message': u'1 replicas are down', u'status_no': 3}, 'servers': {u'paul': {u'status': u'unavailable', u'status_ts': u'2013-11-14 03:57:43', u'hostname': u'paul', u'enabled': True, u'role': u'replica', u'status_message': u'server not responding to polling', u'status_no': 4}, u'john': {u'status': u'healthy', u'status_ts': u'2013-11-14 00:35:49', u'hostname': u'john', u'enabled': True, u'role': u'master', u'status_message': u'master responding to polling', u'status_no': 1}}}
 
+get_cluster_status
+------------------
+
+Like get_status, but returns only the cluster status fields.
+
+::
+
+    get_cluster_status
+        verify Boolean default False
+
+verify
+    whether to verify all cluster data, or to just return cached
+    data.  Default (False) is to use cached.
+
+Returns status dictionary: status, status_no, status_ts, status_message.
+
+    
 get_master_name
 ---------------
 
@@ -147,6 +164,42 @@ Returns the name of the current master.
 
 Returns the name of the current master.  If there is no configured master,
 or if the master has been disabled, returns None.
+
+get_server_info
+---------------
+
+Returns server configuration and status details for the named server(s).
+
+::
+
+    get_server_info
+        servername ServerName default None
+        verify Boolean default False
+
+servername
+    The server whose data to return.  If None, return a
+    dictionary of all servers.
+
+verify
+    Whether to verify all server data first.  Default is to
+    use cached data.
+
+Returns dictionary of servers
+
+::
+
+    { servername: { server details } }
+
+Example:
+
+::
+
+    hr.get_server_info("john", False)
+    
+    {'john': {u'clone_parameters': u'', u'status_ts': u'2013-11-14 00:35:49', u'streaming': True,
+    ...
+    u'restart_method': u'restart_pg_ctl', u'hostname': u'john'}}
+
 
 
 Availability API
@@ -371,6 +424,27 @@ Creates the initial handyrep schema and table.
 
 Returns an RD.  Fails if it cannot connect to the master, or does not have permissions to create schemas and tables, or if the cited database does not exist.
 
+reload_conf
+-----------
+
+Reload handyrep configuration from the handyrep.conf file.  Allows changing of configuration files.
+
+::
+
+    reload_conf
+        config_file FilePath default 'handyrep.conf'
+
+config_file
+    File path location of the configuration file.  Defaults to 'handyrep.conf' in
+    the working directory.
+
+Returns RD
+
+Note: this does not cause a change to server configuration unless
+"override_server_file" is set to True in the new configuration
+file itself.
+
+
 shutdown
 --------
 
@@ -503,9 +577,151 @@ reclone
 clonefrom
     The server to clone from.  Defaults to the current master.
 
+Returns RD:
+    
+SUCCESS
+    the replica was cloned and is running
+
+FAIL
+    either cloning or starting up the new replica failed, or
+    you attempted to clone over an existing running server
+
 Notes: the clone command does not install PostgreSQL binaries, create the
 directories on the server, or configure postgresql.conf, so those things
 need to be already done before cloning.
+
+enable
+------
+
+Enable a server definition already created.  Also verifies the server defintion.
+
+::
+
+    enable
+        servername ServerName
+
+servername
+    the server to enable
+
+Returns RD:
+
+SUCCESS
+    the server was enabled
+
+disable
+-------
+
+Mark an existing server disabled so that it is no longer checked.
+Also attempts to shut down the indicated server.
+
+::
+
+    disable
+        servername ServerName
+
+servername
+    the server to disable
+
+SUCCESS
+    the server was disabled
+
+remove
+------
+
+Delete the definition of a disabled server.
+
+::
+
+    remove
+        servername ServerName
+
+Returns RD:
+
+SUCCESS
+    the server defintion was deleted
+
+FAILURE
+    the server definition is still enabled, so it can't
+    be deleted
+
+
+alter_server_def
+----------------
+
+Change details of a server after initialization.  Required
+because the .conf file is not considered the canonical
+information about servers once servers.save has been created.
+
+::
+
+    alter_server_def
+        servername ServerName
+        kwargs
+
+servername
+    The existing server whose details are to be changed.
+
+kwargs
+    a set of key-value pairs for settings to change.  Settings
+    may be "changed" to the existing value, so it is permissible
+    to pass in an entire dictionary of the server config with
+    one changed setting.
+
+Returns RD with extra fields
+
+definition
+    the resulting new definition for the server
+
+clean_archive
+-------------
+
+Delete old WALs from a shared WAL archive, according to the
+expiration settings in handyrep.conf.  Uses the configured
+archive deletion plugin.
+
+::
+
+    clean_archive
+        expire_hours Integer default None
+
+expire_hours
+    Delete WAL archives older than this number of hours.  If not
+    set, use the setting in handyrep.conf.
+
+Returns RD:
+
+SUCCESS
+    archives deleted, or archiving is disabled so no action taken.
+
+FAIL
+    archives could not be deleted, possibly because of a permissions
+    or configuration issue.
+
+connection_proxy_init
+---------------------
+
+Set up the connection proxy configuration according to the configured
+connection failover plugin.  Not all plugins support initialization.
+
+::
+
+    connection_proxy_init
+
+Returns RD:
+
+SUCCESS
+    proxy configuration pushed, or connection failover is not
+    being used
+
+FAIL
+    error in pushing new configuration, or proxy does not support
+    initialization
+
+
+    
+    
+
+
 
 
 

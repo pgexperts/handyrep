@@ -328,7 +328,10 @@ class HandyRep(object):
         # we don't check it
         return
 
-
+    def reload_conf(self, config_file='handyrep.conf'):
+        config = ReadConfig(config_file)
+        self.conf = config.read('config/handyrep-validate.conf')
+        return return_dict(True, 'configuration file reloaded')
 
     def write_servers(self):
     # write server data to all locations
@@ -1143,7 +1146,6 @@ class HandyRep(object):
         self.shutdown(replicaserver)
         # disable from servers.save
         self.servers[replicaserver]["enabled"] = False
-        self.status_update(replicaserver, "down", "replica server shut down by command")
         self.write_servers()
         return return_dict(True, "server disabled")
 
@@ -1153,6 +1155,8 @@ class HandyRep(object):
         # check if we're up and update status
         if self.servers[servername]["role"] in ("master", "replica"):
             self.verify_server(servername)
+        else:
+            self.write_servers()
         return return_dict(True, "server enabled")
 
     def remove(self, servername):
@@ -1179,8 +1183,8 @@ class HandyRep(object):
         return { "cluster" : self.status,
             "servers" : servall }
 
-    def get_server_info(self, servername=None, verify=True):
-        # returns JSON of all servers
+    def get_server_info(self, servername=None, verify=False):
+        # returns config of all servers
         # if sync:
         if verify:
             # verify_servers
@@ -1218,7 +1222,7 @@ class HandyRep(object):
 
             return reps
 
-    def get_cluster_status(self, verify=True):
+    def get_cluster_status(self, verify=False):
         if verify:
             self.verify_all()
         return self.status
@@ -1284,24 +1288,31 @@ class HandyRep(object):
                 return return_dict(False, "Changes to server role not allowed.  Use promote or relcone instead")
 
         if "enabled" in kwargs:
-            # if we're disabling the server, that's all we'll do
+            # are we enabling or disabling the server?
             if kwargs["enabled"] and not self.servers[servername]["enabled"]:
-                return self.disable(servername)
+                self.enable(servername)
+            elif not kwargs["enabled"] and self.servers[servername]["enabled"]:
+                self.disable(servername)
 
         if "status" in kwargs or "status_no" in kwargs:
             return return_dict(False, "You may not manually change server status")
+
+        if "role" in kwargs:
+            # can't change a replica to a master this way, or vice-versa
+            if ( kwargs["role"] == "master" and self[servername]["role"] != "master" ) or ( kwargs["role"] == "replica" and self[servername]["role"] != "replica" ):
+                return return_dict(False, "You may not change a replica into a master or vice-versa without calling the cloning and remastering functions.")
                 
         # verify servers
         # validate new settings
         valids = self.validate_server_settings(servername, kwargs)
         if self.failed(valids):
-            valids.update(return_dict(False, "server validation failed"))
+            valids.update(return_dict(False, "the settings you supplied do not validate"))
             return valids
         # merge and sync server config
         self.servers[servername] = self.merge_server_settings(servername, kwargs)
         self.write_servers()
         # exit with success
-        return return_dict(True, "Server definition changed", self.servers[servername])
+        return return_dict(True, "Server definition changed", "definition" : self.servers[servername])
 
     def clean_archive(self, expire_hours=None):
         # are we archiving?
