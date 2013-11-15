@@ -4,16 +4,16 @@
 
 from datetime import datetime
 
-def ts_string(self, some_ts):
+def ts_string(some_ts):
     return datetime.strftime(some_ts, '%Y-%m-%d %H:%M:%S')
 
-def string_ts(self, some_string):
+def string_ts(some_string):
     try:
         return datetime.strptime(some_string, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         return None
 
-def now_string(self):
+def now_string():
     return ts_string(datetime.now())
 
 def succeeded(resdict):
@@ -33,6 +33,14 @@ def return_dict(succeeded, details=None, extra=None):
         result = "FAIL"
 
     if extra:
-        return extra.update({ "result" : result, "details" : details })
+        extra.update({ "result" : result, "details" : details })
+        return extra
     else:
         return { "result" : result, "details" : details }
+
+def exstr(errorobj):
+    template = "{0}:\n{1!r}"
+    message = template.format(type(ex).__name__, ex.args)
+    return message
+
+    

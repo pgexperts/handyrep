@@ -124,6 +124,7 @@ class HandyRepPlugin(object):
                     "details" : "connection failure",
                     "return_code" : None }
                 break
+                
         disconnect_all()
         return rundict
 
@@ -280,7 +281,7 @@ class HandyRepPlugin(object):
     def failed(self, retdict):
         return failed(retdict)
 
-    def rd(self, success, details, extra):
+    def rd(self, success, details, extra={}):
         return return_dict(success,details,extra)
 
     def get_one_val(cur, statement, params=[]):

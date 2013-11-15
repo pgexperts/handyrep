@@ -12,7 +12,7 @@ class clone_basebackup(HandyRepPlugin):
         if reclone:
             delcmd = "rm -rf %s/*" % self.servers[servername]["pgdata"]
             delit = self.run_as_root(servername, delcmd)
-            if failed(delit):
+            if self.failed(delit):
                 return self.rd(False, "Unable to clear PGDATA directory, aborting")
 
         # run pgbasebackup
@@ -36,11 +36,11 @@ class clone_basebackup(HandyRepPlugin):
 
     def test(self,servername):
         #check if we have a config
-        if failed(self.test_plugin_conf("clone_basebackup","basebackup_path")):
+        if self.failed(self.test_plugin_conf("clone_basebackup","basebackup_path")):
             return self.rd(False, "clone_basebackup not properly configured")
         #check if the basebackup executable
         #is available on the server
-        if failed(self.run_as_postgres(servername,"%s --help" % self.conf["plugins"]["clone_basebackup"]["basebackup_path"])):
+        if self.failed(self.run_as_postgres(servername,"%s --help" % self.conf["plugins"]["clone_basebackup"]["basebackup_path"])):
             return self.rd(False, "pg_basebackup executable not found")
 
         return self.rd(True, "clone_basebackup works")

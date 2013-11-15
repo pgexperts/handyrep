@@ -12,7 +12,7 @@ import logging
 
 def log_activity( message, always_log=False ):
     if always_log:
-        logging(message)
+        logging.info(message)
     return
 
 def get_pg_conn( dbname, **kwargs ):

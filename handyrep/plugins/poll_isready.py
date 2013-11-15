@@ -14,16 +14,17 @@ class poll_isready(HandyRepPlugin):
         serv = self.servers[servername]
         if not cmd:
             cmd = "pg_isready"
-        return '%s -h %s -p %s -U %s -d %s -q' % (cmd, serv["hostname"], serv["port"], serv["postgres_superuser"], self.conf["handyrep"]["handrey_db"],)
+        return '%s -h %s -p %s -q' % (cmd, serv["hostname"], serv["port"],)
 
     def run(self, servername):
         pollcmd = self.get_pollcmd(servername)
-        runit = self.run_local(pollcmd)
+        runit = self.run_local([pollcmd,])
+        print runit
         # did we have invalid parameters?
         if self.succeeded(runit):
-            return self.rd(True, "poll self.succeeded")
+            return self.rd(True, "poll succeeded", {"return_code" : runit["return_code"]})
         elif runit["return_code"] == 3 or runit["return_code"] is None:
-            return self.rd(False, "invalid configuration for pg_isready")
+            return self.rd(False, "invalid configuration for pg_isready", {"return_code" : runit["return_code"]})
         else:
             # got some other kind of failure, let's poll some more
             # we poll for fail_retries tries, with waits of fail_retry_interval
@@ -32,7 +33,7 @@ class poll_isready(HandyRepPlugin):
                 self.failwait()
                 runit = self.run_local(pollcmd)
                 if self.succeeded(runit):
-                    return self.rd(True, "poll self.succeeded")
+                    return self.rd(True, "poll self.succeeded", {"return_code" : runit["return_code"]})
 
             # if we've gotten here, then all polls have self.failed
             return self.rd(False, "polling self.failed after %d tries" % retries)
