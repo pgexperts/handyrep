@@ -11,7 +11,7 @@ class clone_basebackup(HandyRepPlugin):
         # clear the remote directory if recloning
         if reclone:
             delcmd = "rm -rf %s/*" % self.servers[servername]["pgdata"]
-            delit = self.run_as_root(servername, delcmd)
+            delit = self.run_as_root(servername, [delcmd,])
             if self.failed(delit):
                 return self.rd(False, "Unable to clear PGDATA directory, aborting")
 

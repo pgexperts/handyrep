@@ -32,7 +32,7 @@ class restart_pg_ctl(HandyRepPlugin):
 
     def get_pg_ctl_cmd(self, servername, runmode):
         cmd = self.get_conf("plugins", "restart_pg_ctl","pg_ctl_path")
-        dbloc = self.servers[servername]["pgdata"]
+        dbloc = self.servers[servername]["pgconf"]
         extra = self.get_conf("plugins", "restart_pg_ctl","pg_ctl_flags")
         if not cmd:
             cmd = "pg_ctl"

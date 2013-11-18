@@ -4,7 +4,7 @@ from fabric.contrib.files import upload_template
 #from fabric.context_managers import shell_env
 from lib.error import CustomError
 from lib.dbfunctions import get_one_val, get_one_row, execute_it, get_pg_conn
-from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr
 import json
 from datetime import datetime, timedelta
 import logging
@@ -12,6 +12,7 @@ import time
 import psycopg2
 import psycopg2.extensions
 from os.path import join
+from subprocess import call
 
 class HandyRepPlugin(object):
 
@@ -93,9 +94,9 @@ class HandyRepPlugin(object):
                 else:
                     rundict.update({"result":"FAIL"})
                     break
-            except:
+            except Exception as ex:
                 rundict = { "result" : "FAIL",
-                    "details" : "connection failure",
+                    "details" : "connection failure: %s" % exstr(ex),
                     "return_code" : None }
                 break
 
@@ -111,21 +112,15 @@ class HandyRepPlugin(object):
             "return_code" : None }
         for command in commands:
             try:
-                runit = local(command, capture=True)
-                rundict.update({ "details" : runit ,
-                    "return_code" : runit.return_code })
-                if runit.succeeded:
-                    rundict.update({"result":"SUCCESS"})
-                else:
-                    rundict.update({"result":"FAIL"})
-                    break
-            except:
+                runit = call(command, shell=True)
+                rundict.update({ "details" : "ran command %s" % command ,
+                    "return_code" : runit })
+            except Exception as ex:
                 rundict = { "result" : "FAIL",
-                    "details" : "connection failure",
+                    "details" : "execution failure: %s" % self.exstr(ex),
                     "return_code" : None }
                 break
-                
-        disconnect_all()
+
         return rundict
 
     def push_template(self, servername, templatename, destination, template_params, new_owner=None, file_mode=700):
@@ -284,12 +279,16 @@ class HandyRepPlugin(object):
     def rd(self, success, details, extra={}):
         return return_dict(success,details,extra)
 
-    def get_one_val(cur, statement, params=[]):
+    def get_one_val(self, cur, statement, params=[]):
         return get_one_val(cur, statement, params)
 
-    def get_one_row(cur, statement, params=[]):
+    def get_one_row(self, cur, statement, params=[]):
         return get_one_row(cur, statement, params)
 
-    def execute_it(cur, statement, params=[]):
+    def execute_it(self, cur, statement, params=[]):
         return execute_it(cur, statement, params)
+
+    def exstr(self, errorobj):
+        return exstr(errorobj)
+    
     

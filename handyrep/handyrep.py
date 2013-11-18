@@ -3,14 +3,14 @@ from fabric.network import disconnect_all
 from fabric.contrib.files import upload_template
 from lib.config import ReadConfig
 from lib.error import CustomError
-from lib.dbfunctions import get_one_val, get_one_row
+from lib.dbfunctions import get_one_val, get_one_row, execute_it
 import json
 from datetime import datetime, timedelta
 import logging
 import time
 import importlib
 from plugins.failplugin import failplugin
-from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr
 import psycopg2
 import psycopg2.extensions
 
@@ -235,31 +235,25 @@ class HandyRep(object):
     def init_handyrep_db(self):
         # initialize the handrep schema
         # per settings
-        # we assume that if the table exists
-        # the functions do too
         htable = self.conf["handyrep"]["handyrep_table"]
         hschema = self.conf["handyrep"]["handyrep_schema"]
-        mconn = master_connection()
+        mconn = self.master_connection()
         mcur = mconn.cursor()
-        has_tab = self.get_one_value(mcur, """SELECT count(*) FROM
+        has_tab = get_one_val(mcur, """SELECT count(*) FROM
             pg_stat_user_tables
             WHERE relname = %s and schemaname = %s""",(htable, hschema,))
         if not has_tab:
             # need schema test here for 9.2:
-            has_schema = self.get_one_value(mcur, """SELECT count(*) FROM pg_namespace WHERE nspname = %s""",(htable,))
+            has_schema = get_one_val(mcur, """SELECT count(*) FROM pg_namespace WHERE nspname = %s""",(htable,))
             if not has_schema:
-                self.execute_it(mcur, """CREATE SCHEMA "%s" """ % hschema, [], "Unable to create the handyrep schema")
+                execute_it(mcur, """CREATE SCHEMA "%s" """ % hschema, [])
 
-            self.execute_it(mcur, """CREATE TABLE %s ( updated timestamptz, config JSON, servers JSON, status JSON )""" % self.tabname, [], "Unable to create handrep table")
-            self.execute_it(mcur, "INSERT INTO" + tabname + " VALUES ( %s, %s, %s )""",(self.serv_updated, json.dumps(self.conf), json.dumps(self.servers),))
-            mcur.execute("""SET SEARCH_PATH="%s",public,pg_catalog""" % hschema)
-            
-            # load all functions in the functions directory
-            self.run_sql_dir(mcur, self.conf["handyrep"]["functions_dir"])
+            execute_it(mcur, """CREATE TABLE %s ( updated timestamptz, config JSON, servers JSON, status JSON )""" % self.tabname, [])
+            execute_it(mcur, "INSERT INTO" + self.tabname + " VALUES ( %s, %s, %s )""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),))
 
         # done
         mconn.commit()
-        mconn.disconnect()
+        mconn.close()
         return True
 
     def sync_config(self, write_servers = True):
@@ -352,10 +346,10 @@ class HandyRep(object):
         # if possible, update the table via the master:
         if self.get_master_name():
             try:
-                sconn = master_connection()
+                sconn = self.master_connection()
                 scur = sconn.cursor()
-            except:
-                self.log("DBCONN","Unable to sync configuration to database due to failed connection to master", True)
+            except Exception as ex:
+                self.log("DBCONN","Unable to sync configuration to database due to failed connection to master: %s" % exstr(ex), True)
                 sconn = None
 
             if sconn:
@@ -367,13 +361,13 @@ class HandyRep(object):
                             config = %s, servers = %s, status = %s""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),json.dumps(self.status),))
                         except Exception as e:
                                 # something else is wrong, abort
-                            sconn.disconnect()
+                            sconn.close()
                             self.log("DBCONN","Unable to write HandyRep table to database for unknown reasons, please fix: %s" % e.pgerror, True)
                             return False
                 else:
                     self.init_handyrep_db()
                 sconn.commit()
-                sconn.disconnnect()
+                sconn.close()
                 return True
         else:
             self.log("CONFIG","Unable to save config, status to database since there is no configured master", True, "WARNING")
@@ -386,6 +380,13 @@ class HandyRep(object):
         # no master?  return None and let the calling function
         # handle it
         return None
+
+    def poll(self, servername):
+        # poll servers, according to role
+        if self.is_master(servername):
+            return self.poll_master()
+        else:
+            return self.poll_server(servername)
 
     def poll_master(self):
         # check master using poll method
@@ -437,7 +438,8 @@ class HandyRep(object):
             if servdeets["enabled"]:
                 if servdeets["role"] == "master":
                     master_count += 1
-                    ret.update(self.poll_master())
+                    pollrep = self.poll_master()
+                    ret.update(pollrep)
                     ret[servname] = pollrep
                 elif servdeets["role"] == "replica":
                     pollrep = self.poll_server(servname)
@@ -477,9 +479,9 @@ class HandyRep(object):
         # connect to master
         try:
             mconn = self.master_connection()
-        except Exception as e:
+        except Exception as ex:
             self.status_update(master, "warning","cannot psql to master")
-            issues["psql"] = "cannot psql to master"
+            issues["psql"] = "cannot psql to master: %s" % exstr(ex)
 
         #if both psql and ssh down, we're down:
         if "ssh" in issues and "psql" in issues:
@@ -506,14 +508,14 @@ class HandyRep(object):
             mcur = mconn.cursor()
             # check that you can do a simple write
             try:
-                tempname = """ "%s".temp_test """ % self.conf["handrep"]["handyrep_schema"]
+                tempname = """ "%s".temp_test """ % self.conf["handyrep"]["handyrep_schema"]
                 mcur.execute("""CREATE TEMPORARY TABLE %s ( testval text );""" % tempname);
-            except Exception as e:
-                mconn.disconnect()
+            except Exception as ex:
+                mconn.close()
                 self.status_update(master, "down","master running but cannot write to disk")
-                return return_dict(False, "master is running by writes are frozen")
+                return return_dict(False, "master is running by writes are frozen: %s" % exstr(ex))
             # return success,
-            mconn.disconnect()
+            mconn.close()
             if issues:
                 self.status_update(master, "warning", "passed verification check but no SSH access", issues)
             else:
@@ -534,9 +536,9 @@ class HandyRep(object):
         
         try:
             rconn = self.connection(replicaserver)
-        except Exception as e:
+        except Exception as ex:
             self.status_update(replicaserver, "warning", "cannot psql to server")
-            issues["psql"] = "cannot psql to server"
+            issues["psql"] = "cannot psql to server: %s" % exstr(ex)
 
         # if we had any issues connecting ...
         if "ssh" in issues and "psql" in issues:
@@ -564,14 +566,14 @@ class HandyRep(object):
         # check that it's in replication
             rcur = rconn.cursor()
             isrep = self.is_replica(rcur)
-            rconn.disconnect()
+            rconn.close()
             if not isrep:
                 self.status_update(replicaserver, "warning", "replica is running but is not in replication")
                 return return_dict(False, "replica is not in replication")
         # poll the replica status table
         # which lets us know status and lag
-        repstatus = self.get_plugin("replication_status")
-        repinfo = repstatus(replicaserver, "master")
+        repstatus = self.get_plugin(self.conf["failover"]["replication_status_method"])
+        repinfo = repstatus.run(replicaserver, "master")
         # if the above fails, we can't connect to the master
         if failed(repinfo):
             self.status_update(replicaserver, "warning", "cannot check replication status on master")
@@ -674,7 +676,7 @@ class HandyRep(object):
         # check that it's in replication
         rcur = rconn.cursor()
         isrep = self.is_replica(rcur)
-        rconn.disconnect()
+        rconn.close()
         if not isrep:
             self.status_update(replicaserver, "warning", "server is not in replication")
             return return_dict(False, "server not in replication")
@@ -699,10 +701,15 @@ class HandyRep(object):
         # to see if we need to initiate failover
         # if auto-failover
         # check if we're the hr master
-        if failed(self.check_hr_master()):
+        hrmaster = self.check_hr_master()
+        if succeeded(hrmaster):
+            if not hrmaster["is_master"]:
             # we're not the master, return success
             # and don't do anything
-            return return_dict(True, "not the current HR master, ignore")
+                return return_dict(True, "this server is not the Handyrep master, skipping")
+        else:
+            # we errored abort
+            return return_dict(False, "hr master check errored, cannot proceed")
             
         # if not verify, try polling the master first
         # otherwise go straight to verify
@@ -753,7 +760,7 @@ class HandyRep(object):
             # wait recovery_wait for it to come up
             tries = (self.conf["failover"]["recovery_retries"])
             for mpoll in range(1,tries):
-                if poll(master):
+                if self.poll_server(master):
                     self.status_update(master, "healthy", "restarted successfully")
                     return return_dict(True, "restarted master successfully")
                 else:
@@ -915,7 +922,7 @@ class HandyRep(object):
             # by ssh, try PG
             try:
                 dbconn = self.connection(oldmaster)
-                dbconn.disconnect()
+                dbconn.close()
             except Exception as e:
             # connection failed, looks like the
             # master is gone
@@ -977,8 +984,8 @@ class HandyRep(object):
         # this method is a bit more complex
         # if restart fails, we see if the server is running, and try
         # a startup
-        startup = self.get_plugin(self.servers["servername"]["restart_method"])
-        started = startup(servername, "restart")
+        startup = self.get_plugin(self.servers[servername]["restart_method"])
+        started = startup.run(servername, "restart")
         # poll to check availability
         if failed(started):
             # maybe we failed because PostgreSQL isn't running?
@@ -990,13 +997,13 @@ class HandyRep(object):
                 return(False, "server does not respond to restart commands")
             else:
                 # if not running, try a straight start command
-                started = startup(servername, "start")
+                started = startup.run(servername, "start")
 
         if succeeded(started):
-            if failed(self.poll(servername)):
+            if failed(self.poll_server(servername)):
                 # not available?  wait a bit and try again
                 time.sleep(10)
-                if succeeded(self.poll(servername)):
+                if succeeded(self.poll_server(servername)):
                     self.status_update(servername, "healthy", "server started")
                     return return_dict(True, "server started")
                 else:
@@ -1039,12 +1046,12 @@ class HandyRep(object):
                 if repstat:
                     time.sleep(self.conf["failover"]["fail_retry_interval"])
                 else:
-                    nmconn.disconnect()
+                    nmconn.close()
                     self.servers[newmaster]["role"] = "master"
                     self.servers[newmaster]["enabled"] = True
                     self.status_update(newmaster, "healthy", "promoted to new master")
                     
-        nmconn.disconnect()
+        nmconn.close()
         # if we get here, promotion failed, better re-verify the server
         self.verify_replica(newmaster)
         self.log("FAILOVER","Replica promotion of %s failed" % newmaster)
@@ -1068,7 +1075,7 @@ class HandyRep(object):
         if not newmaster:
             newmaster = self.get_master_name()
         # change replica config
-        remastered = self.push_replica_config(replicaserver, newmaster)
+        remastered = self.push_replica_conf(replicaserver, newmaster)
         if succeeded(result):
             # restart replica
             remastered = self.restart_server(replicaserver)
@@ -1264,7 +1271,7 @@ class HandyRep(object):
         if "hostname" not in newdict.keys():
             return return_dict(False, "hostname not provided")
         # check ssh
-        if not self.test_ssh_host(serverdict):
+        if not self.test_ssh_newhost(newdict["hostname"], newdict["ssh_key"], newdict["ssh_user"]):
             issues.update({ "ssh" : "FAIL" })
         # check postgres connection
         try:
@@ -1272,7 +1279,7 @@ class HandyRep(object):
         except Exception as e:
             issues.update({ "psql" : "FAIL" })
         else:
-            tconn.disconnect()
+            tconn.close()
         # run test_new() methods for each named pluginred: TBD
         # not sure how to do this, since we haven't yet merged
         # the changes into .servers
@@ -1304,15 +1311,17 @@ class HandyRep(object):
                 
         # verify servers
         # validate new settings
-        valids = self.validate_server_settings(servername, kwargs)
-        if self.failed(valids):
-            valids.update(return_dict(False, "the settings you supplied do not validate"))
-            return valids
+        # NOT currently validating settings
+        # because of the insolvable catch-22 in doing so
+        #valids = self.validate_server_settings(servername, kwargs)
+        #if failed(valids):
+        #    valids.update(return_dict(False, "the settings you supplied do not validate"))
+        #    return valids
         # merge and sync server config
         self.servers[servername] = self.merge_server_settings(servername, kwargs)
         self.write_servers()
         # exit with success
-        return return_dict(True, "Server definition changed", "definition" : self.servers[servername])
+        return return_dict(True, "Server definition changed", {"definition" : self.servers[servername]})
 
     def clean_archive(self, expire_hours=None):
         # are we archiving?
@@ -1350,24 +1359,25 @@ class HandyRep(object):
         masterconf = self.servers[self.get_master_name()]
         recparam["replica_connection"] = "host=%s port=%s user=%s application_name=%s" % (masterconf["hostname"], masterconf["port"], servconf["replication_user"], replicaserver,)
         # set up fabric
-        env.key_filename = self.servers[servername]["ssh_key"]
-        env.user = self.servers[servername]["ssh_user"]
+        env.key_filename = self.servers[replicaserver]["ssh_key"]
+        env.user = self.servers[replicaserver]["ssh_user"]
         env.disable_known_hosts = True
-        env.host_string = self.servers[servername]["hostname"]
+        env.host_string = self.servers[replicaserver]["hostname"]
         # push the config
         try:
-            upload_template( rectemp, servconf["replica_conf"], use_jinja=True, context=recparam, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, mode=700)
-            sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_user"], servconf["replica_conf"] ))
+            upload_template( rectemp, servconf["replica_conf"], use_jinja=True, context=recparam, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True)
+            sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_superuser"], servconf["replica_conf"] ))
+            sudo( "chmod 700 %s" % (servconf["replica_conf"] ))
             
-        except:
+        except Exception as ex:
             disconnect_all()
             self.status_update(replicaserver, "warning", "could not change configuration file")
-            return return_dict(False, "could not push new replication configuration")
+            return return_dict(False, "could not push new replication configuration: %s" % exstr(ex))
         
         disconnect_all()
 
         # restart the replica if it was running
-        if is_available(replicaserver):
+        if self.is_available(replicaserver):
             if failed(self.restart(replicaserver)):
                 self.status_update(replicaserver, "warning", "changed config but could not restart server")
                 return return_dict(False, "changed config but could not restart server")
@@ -1574,7 +1584,7 @@ class HandyRep(object):
 
         reptest = self.is_replica(mconn.cursor())
         if reptest:
-            mconn.disconnect()
+            mconn.close()
             raise CustomError("CONFIG","Server configured as the master is actually a replica, aborting connection.")
         
         return mconn
@@ -1597,35 +1607,35 @@ class HandyRep(object):
         # still nothing?  error out
         raise CustomError('DBCONN',"FATAL: no accessible database servers in current server list.  Update the configuration manually and try again.")
 
-    def remote_ls(self):
-        run(self.conf["handyrep"]["test_ssh_command"])
-
-    @task
     def test_ssh(self, servername):
         try:
-            testit = execute(remote_ls,
-                key_filename = self.servers[servername]["ssh_key"],
-                user = self.servers[servername]["ssh_user"],
-                disable_known_hosts = True,
-                hosts = [self.servers[servername]["hostname"],])
+            env.key_filename = self.servers[servername]["ssh_key"]
+            env.user = self.servers[servername]["ssh_user"]
+            env.disable_known_hosts = True
+            env.host_string = self.servers[servername]["hostname"]
+            command = self.conf["handyrep"]["test_ssh_command"]
+            testit = run(command, warn_only=True)
         except:
             return False
 
+        result = testit.succeeded
         disconnect_all()
-        return testit.succeeded
+        return result
 
-    @task
     def test_ssh_newhost(self, hostname, ssh_key, ssh_user ):
         try:
-            testit = execute(remote_ls,
-                key_filename = ssh_key,
-                user = ssh_user,
-                disable_known_hosts = True,
-                hosts = [hostname,])
-        except:
+            env.key_filename = ssh_key
+            env.user = ssh_user
+            env.disable_known_hosts = True
+            env.host_string = hostname
+            command = self.conf["handyrep"]["test_ssh_command"]
+            testit = run(command, warn_only=True)
+        except Exception as ex:
+            print exstr(ex)
             return False
-            
+
+        result = testit.succeeded
         disconnect_all()
-        return testit.succeeded
+        return result
 
         

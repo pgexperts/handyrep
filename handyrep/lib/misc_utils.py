@@ -40,7 +40,7 @@ def return_dict(succeeded, details=None, extra=None):
 
 def exstr(errorobj):
     template = "{0}:\n{1!r}"
-    message = template.format(type(ex).__name__, ex.args)
+    message = template.format(type(errorobj).__name__, errorobj.args)
     return message
 
     

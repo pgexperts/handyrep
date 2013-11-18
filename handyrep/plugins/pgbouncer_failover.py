@@ -27,7 +27,7 @@ class pgbouncer_failover(HandyRepPlugin):
         else:
             return self.rd(False, "unable to restart pgbouncer")
 
-    def setup(self):
+    def init(self):
         return self.run()
 
     def test(self):
