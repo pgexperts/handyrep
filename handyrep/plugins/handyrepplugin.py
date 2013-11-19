@@ -39,7 +39,7 @@ class HandyRepPlugin(object):
         for command in commands:
             try:
                 with shell_env(PGPASSWORD=pgpasswd):
-                    runit = sudo(command, user=runas, warn_only=True)
+                    runit = sudo(command, user=runas, warn_only=True,pty=False)
                 rundict.update({ "details" : runit ,
                     "return_code" : runit.return_code })
                 if runit.succeeded:
@@ -47,9 +47,9 @@ class HandyRepPlugin(object):
                 else:
                     rundict.update({"result":"FAIL"})
                     break
-            except:
+            except Exception as ex:
                 rundict = { "result" : "FAIL",
-                    "details" : "connection failure",
+                    "details" : "connection failure: %s" % self.exstr(ex),
                     "return_code" : None }
                 break
         

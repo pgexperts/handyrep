@@ -4,7 +4,7 @@
 service postgresql stop
 
 # copy configuration files
-cp /setup/paul/postgres/conf/* /var/lib/postgresql/9.3/main/
+cp /setup/paul/postgres/conf/* /etc/postgresql/9.3/main/
 #cp /setup/postgres/pgbouncer.ini /etc/pgbouncer/
 #cp /setup/postgres/userlist.txt /etc/pgbouncer/
 #cp /setup/postgres/pgbouncer.default /etc/default/pgbouncer
@@ -23,7 +23,7 @@ ln -s /usr/lib/postgresql/9.3/bin/initdb /usr/bin/initdb
 ln -s /usr/lib/postgresql/9.3/bin/pg_archivecleanup /usr/bin/pg_archivecleanup
 
 # restart postgresql
-#su - postgres -c "/usr/bin/pg_ctl -D /var/lib/postgresql/9.3/main start"
+#su - postgres -c "/usr/bin/pg_ctl -D /etc/postgresql/9.3/main start"
 
 # load the libdata database
 #psql -U postgres -f /setup/postgres/libdata.users.sql postgres

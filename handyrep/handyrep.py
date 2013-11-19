@@ -399,7 +399,7 @@ class HandyRep(object):
             else:
                 # if master was down, recover it
                 # but don't eliminate warnings
-                if self.servers[master]["status_no"] > 3:
+                if self.servers[master]["status_no"] in [0,4,5,] :
                     self.status_update(master, "healthy", "master responding to polling")
                 else:
                     # update timestamp but don't change message/status
@@ -463,8 +463,6 @@ class HandyRep(object):
 
         return ret
             
-                    
-                
 
     def verify_master(self):
         # check that you can ssh
@@ -748,7 +746,7 @@ class HandyRep(object):
     def pg_service_status(self, servername):
         # check the service status on the master
         restart_cmd = self.get_plugin(self.servers[servername]["restart_method"])
-        return restart_cmd.run("status")
+        return restart_cmd.run(servername, "status")
 
     def restart_master(self):
         # attempt to restart the master on the
@@ -959,7 +957,7 @@ class HandyRep(object):
 
     def startup(self, servername):
         # start server
-        startup = self.get_plugin(self.servers["servername"]["restart_method"])
+        startup = self.get_plugin(self.servers[servername]["restart_method"])
         started = startup.run(servername, "start")
         # poll to check availability
         if succeeded(started):
@@ -1133,11 +1131,11 @@ class HandyRep(object):
         # write recovery.conf, assuming it's configured
         if failed(self.push_replica_conf(replicaserver)):
             self.log("CLONE","Cloning %s failed" % replicaserver, True)
-            return return_dict(False, "cloning failed")
+            return return_dict(False, "cloning failed, could not push replica config")
         # same for archiving script
-        if failed(self.push_archiving_script(replicaserver)):
+        if failed(self.push_archive_script(replicaserver)):
             self.log("CLONE","Cloning %s failed" % replicaserver, True)
-            return return_dict(False, "cloning failed")
+            return return_dict(False, "cloning failed, could not push archiving config")
         # start replica
         if succeeded(self.startup(replicaserver)):
             self.servers[replicaserver]["enabled"] = True
@@ -1146,7 +1144,7 @@ class HandyRep(object):
             return return_dict(True, "cloning succeeded")
         else:
             self.log("CLONE","Cloning %s failed" % replicaserver, True)
-            return return_dict(False, "cloning failed")
+            return return_dict(False, "cloning failed, could not start replica")
 
     def disable(self, replicaserver):
         # shutdown replica.  Don't check result, we don't really care
@@ -1357,7 +1355,7 @@ class HandyRep(object):
                 recparam["archive_host"] = servconf["hostname"]
         # build the connection string
         masterconf = self.servers[self.get_master_name()]
-        recparam["replica_connection"] = "host=%s port=%s user=%s application_name=%s" % (masterconf["hostname"], masterconf["port"], servconf["replication_user"], replicaserver,)
+        recparam["replica_connection"] = "host=%s port=%s user=%s application_name=%s" % (masterconf["hostname"], masterconf["port"], self.conf["handyrep"]["replication_user"], replicaserver,)
         # set up fabric
         env.key_filename = self.servers[replicaserver]["ssh_key"]
         env.user = self.servers[replicaserver]["ssh_user"]
@@ -1389,7 +1387,7 @@ class HandyRep(object):
     def push_archive_script(self, servername):
         # write a wal_archive executable script
         # to the server
-        archconf = self.conf["archiving"]
+        archconf = self.conf["archive"]
         # check config
         if archconf["push_archive_script"]:
             if not archconf["archive_template"]:
