@@ -25,8 +25,8 @@ class replication_mb_lag_93(HandyRepPlugin):
         replag = self.get_one_val(mcur, """SELECT pg_xlog_location_diff(sent_location, replay_location)/(1024^2)
         FROM pg_stat_replication
         WHERE application_name = %s""", [replicaserver,])
-        if replag:
-            return self.rd(True, "server is replciating", { "replicating" : True, "lag" : replag })
+        if replag is not None:
+            return self.rd(True, "server is replicatting", { "replicating" : True, "lag" : replag })
         else:
             return self.rd(True, "server %s is not currently in replication", { "replicating" : False, "lag" : 0 })
 

@@ -132,7 +132,9 @@ class HandyRepPlugin(object):
         env.disable_known_hosts = True
         env.host_string = self.servers[servername]["hostname"]
         try:
-            upload_template( templatename, destination, use_jinja=True, context=template_params, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, use_mode=file_mode )
+            upload_template( templatename, destination, use_jinja=True, context=template_params, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True )
+            if file_mode:
+                sudo("chmod %d %s" % (file_mode, destination,))
             if new_owner:
                 sudo("chown %s %s" % (new_owner, destination,))
         except:
@@ -196,7 +198,7 @@ class HandyRepPlugin(object):
         connect_string = "dbname=%s host=%s port=%s user=%s application_name=handyrep " % (self.conf["handyrep"]["handyrep_db"], self.servers[servername]["hostname"], self.servers[servername]["port"], self.conf["handyrep"]["handyrep_user"],)
 
         if self.conf["handyrep"]["handyrep_db_pass"]:
-                connect_string += " password=%s " % self.conf["handyrep"]["handyrep_pw"]
+                connect_string += " password=%s " % self.conf["handyrep"]["handyrep_db_pass"]
 
         try:
             conn = psycopg2.connect( connect_string )
