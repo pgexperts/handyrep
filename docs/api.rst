@@ -200,6 +200,19 @@ Example:
     ...
     u'restart_method': u'restart_pg_ctl', u'hostname': u'john'}}
 
+read_log
+--------
+
+Retrieves the last N lines of the handyrep log and presents them as a list in reverse chonological order.
+
+::
+
+    read_log
+        numlines Integer default 20
+
+numlines
+    how many lines of the log to retrieve
+
 
 
 Availability API

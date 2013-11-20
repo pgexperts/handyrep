@@ -21,6 +21,10 @@ class HandyRep(object):
         config = ReadConfig(config_file)
         # need to figure out how to set the location for
         self.conf = config.read('config/handyrep-validate.conf')
+        try:
+            logging.basicConfig(filename=self.conf["handyrep"]["log_file"], datefmt="%Y-%m-%d %H:%M%:S", format="%(asctime)-12s %(message)s")
+        except Exception as ex:
+            raise CustomError("STARTUP","unable to open designated log file: %s" % exstr(ex))
         self.servers = {}
         self.tabname = """ "%s"."%s" """ % (self.conf["handyrep"]["handyrep_schema"],self.conf["handyrep"]["handyrep_table"],)
         self.status = { "status": "unknown",
@@ -35,11 +39,25 @@ class HandyRep(object):
         if iserror:
             logging.error("%s: %s" % (category, message,))
         else:
-            logging.info("%s: %s" % (category, message,))
+            if self.conf["handyrep"]["log_verbose"]:
+                logging.info("%s: %s" % (category, message,))
             
         if alert_type:
             self.push_alert(alert_type, category, message)
         return True
+
+    def read_log(self, numlines=20):
+        # reads the last N lines of the log
+        # uses byte position to make it more efficient
+        lbytes = numlines * 100
+        with open(self.conf["handyrep"]["log_file"], "r") as logf:
+            logf.seek (0, 2)           # Seek @ EOF
+            fsize = logf.tell()        # Get Size
+            logf.seek (max (fsize-lbytes, 0), 0)
+            lines = logf.readlines()       # Read to end
+
+        lines = lines[-numlines:]    # Get last 10 lines
+        return list(reversed(lines))
 
     def push_alert(self, alert_type, category, message):
         if self.conf["handyrep"]["push_alert_method"]:

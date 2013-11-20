@@ -1,7 +1,9 @@
 # plugin to select a new replica based on the "priority"
 # assigned by users in the server definitions
 # as with all replica selection, it returns a LIST
-# of replicas, sorted by priority and lagged status
+# of replicas
+# sorts replicas first by status ( healthy, lagged, then warning and unknown together)
+# then sorts them by priority
 
 from plugins.handyrepplugin import HandyRepPlugin
 
