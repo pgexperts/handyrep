@@ -28,3 +28,6 @@ pip-log.txt
 
 #current vagrant files
 .vagrant
+
+#kate swap files
+.*kate-swp

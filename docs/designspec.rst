@@ -1,6 +1,8 @@
 HandyRep
 ========
 
+This is the original design spec for HandyRep. It is not completely up to date, and is superceded by other documentation.
+
 General
 -------
 
