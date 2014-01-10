@@ -276,10 +276,10 @@ class HandyRep(object):
         mcur = mconn.cursor()
         has_tab = get_one_val(mcur, """SELECT count(*) FROM
             pg_stat_user_tables
-            WHERE relname = %s and schemaname = %s""",(htable, hschema,))
+            WHERE relname = %s and schemaname = %s""",[htable, hschema,])
         if not has_tab:
             # need schema test here for 9.2:
-            has_schema = get_one_val(mcur, """SELECT count(*) FROM pg_namespace WHERE nspname = %s""",(htable,))
+            has_schema = get_one_val(mcur, """SELECT count(*) FROM pg_namespace WHERE nspname = %s""",[hschema,])
             if not has_schema:
                 execute_it(mcur, """CREATE SCHEMA "%s" """ % hschema, [])
 
@@ -1415,7 +1415,7 @@ class HandyRep(object):
             # can't change a replica to a master this way, or vice-versa
             # unless the server is already disabled
             newrole = serverprops["role"]
-            if serverprops["role"] != olddef["role"] and olddef["enabled"] and (olddef["role"] in ("replica", "master") or serverprops["role"] in ("replica", "master"))
+            if serverprops["role"] <> olddef["role"] and olddef["enabled"] and (olddef["role"] in ["replica", "master",] or serverprops["role"] in ["replica", "master",]):
                 return return_dict(False, "Changes to server role for enabled servers in replication not allowed.  Use promote, disable and/or clone instead")
         else:
             newrole = olddef["role"]
