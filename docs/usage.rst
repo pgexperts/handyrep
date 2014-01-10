@@ -6,9 +6,10 @@ HandyRep is a RESTful network service or library which manages status monitoring
 Daemon Usage
 ------------
 
-HandyRep ships with the HandyRep WSGI Daemon, which is the standard way to use HandyRep.  This Daemon runs constantly on the HandyRep server, performing scheduled checks and tasks, and responding to GET and POST requests for status information and to perform manual actions (such as cloning a new replica).  In this mode, HandyRep supplies a service-oriented interface for managing your database cluster; you run the daemon and whenever you need to make changes to the cluster, you send it commands.
+HandyRep ships with the HandyRep Flask Daemon, which is the standard way to use HandyRep.  This Daemon runs constantly on the HandyRep server, performing scheduled checks and tasks, and responding to GET and POST requests for status information and to perform manual actions (such as cloning a new replica).  In this mode, HandyRep supplies a service-oriented interface for managing your database cluster; you run the daemon and whenever you need to make changes to the cluster, you send it commands.
 
-Note that the Daemon is single-process; HandyRep does not currently do any multiprocess activity.
+Note that the Daemon is single-process; HandyRep does not currently do any multiprocess activity.  As such, the web server
+you are using as a container for the Daemon needs to support single-process configuration.
 
 Library Usage
 -------------
@@ -32,8 +33,8 @@ HandyRep is designed around the following assumptions about your PostgreSQL clus
 
 If you are doing log archiving, HandyRep also makes the following assumptions:
 
-* Only one (network or mounted) location for archiving
-* Assumes that all replicas can access the same archive
+* Only one (network or relative mounted) location for archiving
+* Assumes that all replicas can access the same (relative) archive
 * Assumes that all nodes can use the same archiving scripts, if pushing scripts is enabled
 * Assumes that the postgres user does all archive work
 
@@ -99,7 +100,3 @@ Log
 ---
 
 HandyRep keeps a log of all of its actions, at a location configured in handyrep.conf.  The tail of this log is available via the API so that you can check recent actions including failover.
-
-
-
-

@@ -10,8 +10,11 @@ HandyRep is a Python application which has the following module dependencies:
 * fabric 1.8.0+
 * paramiko
 * jinja2
-* uWSGI
 * psycopg2 2.5+
+
+Plus, if you are using the Daemon:
+
+* flask 0.8+
 
 Plus these general packages:
 
@@ -122,26 +125,11 @@ handyrep_table
 handyrep_user
     User handyrep uses when updating its own status data.
     
-handyrep_db_pass
-    Password for that user, if required.
-    
 postgres_superuser
     Name of the PostgreSQL superuser.  Usually "postgres".
-    
-superuser_pass
-    Password for same.
 
 replication_user
     Name of the user used for streaming replication connections.  Often the same as the superuser.
-    
-replication_pass
-    Password for same.
-
-admin_password
-    API password for HandyRep administration rights in the REST interface.
-    
-read_password
-    API password for HandyRep read-only rights.
     
 templates_dir
     Directory where the templates are stored.
@@ -151,6 +139,25 @@ test_ssh_command
     
 push_alert_method
     If we are pushing alerts to the monitoring system, the name of the plugin used to do that.  If left blank, HandyRep will not attempt to push alerts.
+
+Section passwords
+-----------------
+
+handyrep_db_pass
+    Password for the handyrep database user, if required.
+
+superuser_pass
+    Password for "postgres".
+
+replication_pass
+    Password for replication user
+
+admin_password
+    API password for HandyRep administration rights in the REST interface.
+
+read_password
+    API password for HandyRep read-only rights.
+
 
 Section failover
 ----------------
@@ -164,8 +171,8 @@ poll_method
 poll_interval
     Number of seconds between polling all of the servers.
     
-verify_interval
-    Number of sections between running a full verify on all servers.
+verify_frequency
+    Do a full verify after this number of polling cycles.
     
 fail_retries
     If polling or other connections to a server fails, how many times should HandyRep keep trying to connect before declaring failure?
@@ -295,13 +302,14 @@ hostname
     The DNS name or IP address of the server.
 
 role
-    The role of the server in replication.  Options include master, replica, archive, and proxy, but any label can be used.  HandyRep cares only about "master" and "replica"; other labels are there for administrator information only.
+    The role of the server in replication.  Options include master, replica, archive, and proxy, but any label can be used.  HandyRep cares only about "master" and "replica"; other labels are there for administrator information only,
+    or to support certain plugins (such as "multi_pgbouncer"), or for archiving.
 
 failover_priority
     The priority of this server to be the new master in a failover event, if using the select_by_priority method, or if breaking ties with other methods.  Lower numbers are chosen first.
 
 enabled
-    Is this server enabled for replication?  Note that non-database servers will be marked as "False" even though they may be used for some other purpose (i.e. archive storage).
+    Is this server enabled for replication?  Note that non-database servers may be marked as "False" even though they may be used for some other purpose (i.e. archive storage).
 
 In addition to the above, each server definition may change any of the various settings in server_defaults.
 

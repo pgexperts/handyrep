@@ -43,4 +43,14 @@ def exstr(errorobj):
     message = template.format(type(errorobj).__name__, errorobj.args)
     return message
 
+def get_nested_val(mydict, *args):
+    newdict = mydict
+    for key in args:
+        try:
+            newdict = newdict[key]
+        except:
+            return None
+
+    return newdict
+
     

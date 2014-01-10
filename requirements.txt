@@ -2,4 +2,5 @@ psycopg2>=2.5
 fabric>=1.7
 ConfigObj>=4.6
 jinja2>=2.0
+flask>=0.8
 

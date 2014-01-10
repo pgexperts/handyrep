@@ -8,7 +8,7 @@ pool_mode = session
 listen_port = 6543
 listen_addr = *
 auth_type = md5
-auth_file = users.txt
+auth_file = /etc/pgbouncer/userlist.txt
 
 max_client_conn = 1000
 default_pool_size = 20
@@ -17,10 +17,10 @@ min_pool_size = 1
 server_reset_query = DISCARD ALL;
 client_login_timeout = 15
 
-logfile = pgbouncer.log
+logfile = /var/log/postgresql/pgbouncer.log
 log_connections = 0
 log_disconnections = 0
 
-pidfile = pgbouncer.pid
+pidfile = /var/run/pgbouncer.pid
 admin_users = postgres
 stats_users = postgres

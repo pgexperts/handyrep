@@ -6,7 +6,7 @@ CONFIGURATION = {
   box: 'handyrep',
   box_url: '/home/josh/Dropbox/Public/handyrep.box',
 #  box_url: 'https://dl.dropboxusercontent.com/u/5132935/handyrep.box',
-  starting_ip_address: '192.168.199.201',
+  starting_ip_address: '192.168.199.101',
   vms: [
     {
       name: :john,
@@ -14,24 +14,33 @@ CONFIGURATION = {
       hostname: 'john',
       install_master: false,
       memory: 256,
-      provision_script: "bootstrap-john.sh"
+      provision_script: "bootstrap-john.sh",
+      forward_hr: 5001,
+      forward_pg: 15432,
+      forward_pgb: 16432
     },
     {
-      name: :paul,
-      primary: false,
-      hostname: 'paul',
-      install_master: false,
-      memory: 256,
-      provision_script: "bootstrap-paul.sh"
-    },
-    {
-      name: :george,
-      primary: false,
-      hostname: 'george',
-      install_master: false,
-      memory: 256,
-      provision_script: "bootstrap-george.sh"
-    }
+     name: :paul,
+     primary: false,
+     hostname: 'paul',
+     install_master: false,
+     memory: 256,
+     provision_script: "bootstrap-paul.sh",
+     forward_hr: 5002,
+     forward_pg: 15433,
+     forward_pgb: 16433
+   },
+   {
+     name: :george,
+     primary: false,
+     hostname: 'george',
+     install_master: false,
+     memory: 256,
+     provision_script: "bootstrap-george.sh",
+     forward_hr: 5003,
+     forward_pg: 15434,
+     forward_pgb: 16434
+   }
   ]
 }
 
@@ -65,7 +74,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       end
 
       vagrant_vm.vm.hostname = vm[:hostname]
-      vagrant_vm.vm.network :private_network, ip: vm[:ip_address]
+#      vagrant_vm.vm.network "public_network", :ip => vm[:ip_address], :bridge => 'wlan0'
+      vagrant_vm.vm.network "private_network", ip: vm[:ip_address]
+      vagrant_vm.vm.network "forwarded_port", guest: 5000, host: vm[:forward_hr]
+      vagrant_vm.vm.network "forwarded_port", guest: 5432, host: vm[:forward_pg]
+      vagrant_vm.vm.network "forwarded_port", guest: 6432, host: vm[:forward_pgb]
       vagrant_vm.hostmanager.aliases = ["#{vm[:hostname]}.#{CONFIGURATION[:domain]}"]
 
       config.vm.synced_folder "setup", "/setup"

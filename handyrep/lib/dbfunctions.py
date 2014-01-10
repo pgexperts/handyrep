@@ -146,6 +146,9 @@ def get_one_val(cur, statement, params=[]):
         log_activity(e.pgerror, True)
         return None
     val = cur.fetchone()
-    return val[0]
+    if val is not None:
+        return val[0]
+    else:
+        return None
 
 

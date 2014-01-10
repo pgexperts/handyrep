@@ -58,7 +58,7 @@ class HandyRepPlugin(object):
 
     def run_as_postgres(self, servername, commands):
         pguser = self.conf["handyrep"]["postgres_superuser"]
-        pwd = self.conf["handyrep"]["superuser_pass"]
+        pwd = self.conf["passwords"]["superuser_pass"]
         return self.sudorun(servername, commands, pguser, pwd)
 
     def run_as_replication(self, servername, commands):
@@ -66,7 +66,7 @@ class HandyRepPlugin(object):
         # since the replication user doesn't generally have a shell
         # account
         pguser = self.conf["handyrep"]["postgres_superuser"]
-        pwd = self.conf["handyrep"]["replication_pass"]
+        pwd = self.conf["passwords"]["replication_pass"]
         return self.sudorun(servername, commands, pguser, pwd)
 
     def run_as_root(self, servername, commands):
@@ -197,8 +197,8 @@ class HandyRepPlugin(object):
         # connects as the handyrep user to a remote database
         connect_string = "dbname=%s host=%s port=%s user=%s application_name=handyrep " % (self.conf["handyrep"]["handyrep_db"], self.servers[servername]["hostname"], self.servers[servername]["port"], self.conf["handyrep"]["handyrep_user"],)
 
-        if self.conf["handyrep"]["handyrep_db_pass"]:
-                connect_string += " password=%s " % self.conf["handyrep"]["handyrep_db_pass"]
+        if self.conf["passwords"]["handyrep_db_pass"]:
+                connect_string += " password=%s " % self.conf["passwords"]["handyrep_db_pass"]
 
         try:
             conn = psycopg2.connect( connect_string )

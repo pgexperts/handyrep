@@ -10,9 +10,10 @@ import logging
 import time
 import importlib
 from plugins.failplugin import failplugin
-from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr, get_nested_val
 import psycopg2
 import psycopg2.extensions
+import os
 
 class HandyRep(object):
 
@@ -22,16 +23,17 @@ class HandyRep(object):
         # need to figure out how to set the location for
         self.conf = config.read('config/handyrep-validate.conf')
         try:
-            logging.basicConfig(filename=self.conf["handyrep"]["log_file"], datefmt="%Y-%m-%d %H:%M%:S", format="%(asctime)-12s %(message)s")
+            logging.basicConfig(filename=self.conf["handyrep"]["log_file"], datefmt="%Y-%m-%d %H:%M:%S", format="%(asctime)-12s %(message)s")
         except Exception as ex:
             raise CustomError("STARTUP","unable to open designated log file: %s" % exstr(ex))
         self.servers = {}
         self.tabname = """ "%s"."%s" """ % (self.conf["handyrep"]["handyrep_schema"],self.conf["handyrep"]["handyrep_table"],)
         self.status = { "status": "unknown",
             "status_no" : 0,
+            "pid" : os.getpid(),
             "status_message" : "status not checked yet",
             "status_ts" : '1970-01-01 00:00:00' }
-        self.sync_config(False)
+        self.sync_config(True)
         # return a handyrep object
         return None
 
@@ -58,6 +60,21 @@ class HandyRep(object):
 
         lines = lines[-numlines:]    # Get last 10 lines
         return list(reversed(lines))
+
+    def get_setting(self, setting_name):
+        if type(setting_name) is list:
+            # prevent getting passwords this way
+            if setting_name[0] == "passwords":
+                return None
+            else:
+                return get_nested_val(self.conf, *setting_name)
+        else:
+            # if category not supplied, then use "handyrep"
+            return get_nested_val(self.conf, "handyrep", "setting_name")
+
+    def set_verbose(self, verbose=True):
+        self.conf["handyrep"]["log_verbose"] = verbose
+        return verbose
 
     def push_alert(self, alert_type, category, message):
         if self.conf["handyrep"]["push_alert_method"]:
@@ -274,6 +291,25 @@ class HandyRep(object):
         mconn.close()
         return True
 
+    def check_pid(self, serverdata):
+        # checks the PID kept in the servers.save file
+        # on startup or any full config sync
+        # if it doesn't match the current PID and the other PID
+        # is actually running, exit with error
+        oldpid = get_nested_val(serverdata, "status", "pid")
+        newpid = os.getpid()
+        #print "oldpid: %d, newpid: %d" % (oldpid, newpid,)
+        if oldpid:
+            if oldpid <> newpid:
+                try:
+                    os.kill(oldpid, 0)
+                except OSError:
+                    return newpid
+                else:
+                    raise CustomError("HANDYREP","Another HandyRep is running on this server with pid %d" % oldpid)
+        else:
+            return newpid
+
     def sync_config(self, write_servers = True):
         # read serverdata from file
         # this function does a 3-way sync of data
@@ -284,10 +320,14 @@ class HandyRep(object):
         # if the database is more updated, use that
         # if neither is present, or if the OVERRIDE conf
         # option is present, then use the config file
+        # also checks the PID of the HR process stored in
+        # servers.save in order to verify that we're not
+        # running two HR daemons
         use_conf = "conf"
         if not self.conf["handyrep"]["override_server_file"]:
             serverdata = self.read_serverfile()
             if serverdata:
+                self.check_pid(serverdata)
                 servfiledate = serverdata["status"]["status_ts"]
             else:
                 servfiledate = None
@@ -333,6 +373,8 @@ class HandyRep(object):
             # set self.status to status field
             self.servers = dbconf[3]
 
+        # update the pid
+        self.status["pid"] = os.getpid()
         # write all servers
         if write_servers:
             self.write_servers()
@@ -463,6 +505,7 @@ class HandyRep(object):
                     pollrep = self.poll_server(servname)
                     if succeeded(pollrep):
                         rep_count += 1
+                        ret["failover_ok"] = True
                     ret[servname] = pollrep
                 # other types of servers are ignored
 
@@ -485,10 +528,10 @@ class HandyRep(object):
     def verify_master(self):
         # check that you can ssh
         issues = {}
-        master =self.get_master_name()
+        master = self.get_master_name()
         if not master:
             self.no_master_status()
-            return 
+            return return_dict(False, "No master configured")
         if not self.test_ssh(master):
             self.status_update(master, "warning","cannot SSH to master")
             issues["ssh"] = "cannot SSH to master"
@@ -502,11 +545,11 @@ class HandyRep(object):
         #if both psql and ssh down, we're down:
         if "ssh" in issues and "psql" in issues:
             self.status_update(master, "unavailable", "psql and ssh both failing")
-            return returndict(False, "master not responding", issues)
+            return return_dict(False, "master not responding", issues)
         # if we have ssh but not psql, see if we can check if pg is running
         elif "ssh" not in issues and "psql" in issues:
             # try polling first, maybe master is just full up on connections
-            if succeeded(poll_master()):
+            if succeeded(self.poll_master()):
                 self.status_update(master, "warning", "master running but we cannot connect")
                 return return_dict(True, "master running but we cannot connect", issues)
             else:
@@ -559,11 +602,11 @@ class HandyRep(object):
         # if we had any issues connecting ...
         if "ssh" in issues and "psql" in issues:
             self.status_update(replicaserver, "unavailable", "psql and ssh both failing")
-            return returndict(False, "server not responding", issues)
+            return return_dict(False, "server not responding", issues)
         # if we have ssh but not psql, see if we can check if pg is running
         elif "ssh" not in issues and "psql" in issues:
             # try polling first, maybe master is just full up on connections
-            if succeeded(poll_replica(replicaserver)):
+            if succeeded(self.poll_server(replicaserver)):
                 self.status_update(replicaserver, "warning", "server running but we cannot connect")
                 return return_dict(True, "server running but we cannot connect", issues)
             else:
@@ -658,7 +701,7 @@ class HandyRep(object):
 
                 # do we have any good replicas?
         if rep_count == 0:
-            vertest.update({"details":ret["details"] + " and no working replica found","failover_ok":False})
+            vertest.update({"details" : vertest["details"] + " and no working replica found","failover_ok":False})
 
         return vertest
 
@@ -743,23 +786,53 @@ class HandyRep(object):
             # maybe restart it?  depends on config
             if self.conf["failover"]["restart_master"]:
                 if succeeded(self.restart_master()):
-                    return vercheck.update(return_dict(True, "master restarted"))
+                    self.write_servers()
+                    return return_dict(True, "master restarted")
             
             # otherwise, check if autofailover is configured
             # and if it's OK to failover
             if self.conf["failover"]["auto_failover"] and vercheck["failover_ok"]:
                 failit = self.auto_failover()
                 if succeeded(failit):
+                    self.write_servers()
                     return return_dict(True, "failed over to new master")
                 else:
-                    return vercheck.update(return_dict(False, "master down, failover failed"))
+                    vercheck.update(return_dict(False, "master down, failover failed"))
+                    self.write_servers()
+                    return vercheck
             elif not self.conf["failover"]["auto_failover"]:
-                return vercheck.update(return_dict(False, "master down, auto_failover not enabled"))
+                vercheck.update(return_dict(False, "master down, auto_failover not enabled"))
+                self.write_servers()
+                return vercheck
             else:
-                return vercheck.update(return_dict(False, "master down or split-brain, auto_failover is unsafe"))
+                vercheck.update(return_dict(False, "master down or split-brain, auto_failover is unsafe"))
+                self.write_servers()
+                return vercheck
         else:
+            self.write_servers()
             return vercheck
-            
+
+    def failover_check_cycle(self, poll_num):
+        # same as failover check, only desinged to work with
+        # hdaemons periodic in order to return the cycle information
+        # periodic expects
+        # check the poll cycle number
+        if poll_num == 1:
+            verifyit = True
+        else:
+            verifyit = False
+        # do a failover check:
+        fcheck = self.failover_check(verifyit)
+        if succeeded(fcheck):
+            # on success, increment the poll cycle
+            poll_next = poll_num + 1
+            if poll_next >= self.conf["failover"]["verify_frequency"]:
+                poll_next = 1
+        else:
+            # on fail, do a full verify next time
+            poll_next = 1
+        # sleep for poll interval seconds
+        return self.conf["failover"]["poll_interval"], poll_next
 
     def pg_service_status(self, servername):
         # check the service status on the master
@@ -776,7 +849,7 @@ class HandyRep(object):
 
         restart_cmd = self.get_plugin(self.servers[master]["restart_method"])
         restart_result = restart_cmd.run(master, "restart")
-        if suceeded(restart_result):
+        if succeeded(restart_result):
             # wait recovery_wait for it to come up
             tries = (self.conf["failover"]["recovery_retries"])
             for mpoll in range(1,tries):
@@ -829,18 +902,23 @@ class HandyRep(object):
                 if succeeded(self.promote(replica)):
                     # if remastering, attempt to remaster
                     if remaster:
-                        for servername, servinfo in self.servers.keys():
+                        for servername, servinfo in self.servers.iteritems():
                             if servinfo["role"] == "replica" and servinfo["enabled"]:
                                 # don't check result, we do that in
                                 # the remaster procedure
                                 self.remaster(servname, newmaster)
                     # fail over connections:
-                    if succeeded(self.connection_failover()):
+                    if succeeded(self.connection_failover(replica)):
+                        # update statuses
+                        self.status = self.clusterstatus()
+                        self.write_servers()
                         # run post-failover scripts
                         # we don't fail back if they fail, though
-                        if failed(self.extra_failover_commands(newmaster)):
+                        if failed(self.extra_failover_commands(replica)):
                             self.cluster_status_update("warning","postfailover commands failed")
                             return(True, "Failed over, but postfailover scripts did not succeed")
+                            
+                        return(True, "Failover to %s succeeded" % replica)
                     else:
                         # augh.  promotion succeeded but we can't fail over
                         # the connections.  abort
@@ -854,6 +932,7 @@ class HandyRep(object):
             self.status_update(oldmaster, "warning", "attempted failover and did not succeed, please check servers")
         else:
             self.status_update(oldmaster, "down","Unable to promote any replicas")
+            
         self.log("FAILOVER","Unable to promote any replicas",True, "CRITICAL")
         return return_dict(False, "Unable to promote any replicas")
 
@@ -899,7 +978,7 @@ class HandyRep(object):
                 if succeeded(self.promote(replica)):
                     # if remastering, attempt to remaster
                     if remaster:
-                        for servername, servinfo in self.servers.keys():
+                        for servername, servinfo in self.servers.iteritems():
                             if servinfo["role"] == "replica" and servinfo["enabled"]:
                                 # don't check result, we do that in
                                 # the remaster procedure
@@ -1056,6 +1135,7 @@ class HandyRep(object):
         # send promotion command
         promotion_command = self.get_plugin(self.servers[newmaster]["promotion_method"])
         promoted = promotion_command.run(newmaster)
+        nmconn = None
         if succeeded(promoted):
             # check that we can still connect with the replica, error if not
             try:
@@ -1096,7 +1176,7 @@ class HandyRep(object):
     def select_new_master(self):
         # first check all replicas
         selection = self.get_plugin(self.conf["failover"]["selection_method"])
-        reps = selection(self.conf, self.servers)
+        reps = selection.run()
         return reps
 
     def remaster(self, replicaserver, newmaster=None):
@@ -1105,9 +1185,9 @@ class HandyRep(object):
             newmaster = self.get_master_name()
         # change replica config
         remastered = self.push_replica_conf(replicaserver, newmaster)
-        if succeeded(result):
+        if succeeded(remastered):
             # restart replica
-            remastered = self.restart_server(replicaserver)
+            remastered = self.restart(replicaserver)
             
         if failed(remastered):
             self.verify_server(replicaserver)
@@ -1117,19 +1197,19 @@ class HandyRep(object):
             self.log("REMASTER", "remastered %s" % replicaserver)
             return return_dict(True, "remastering succeeded")
 
-    def add_server(self, servername, *kwargs):
+    def add_server(self, servername, **serverprops):
         # add all of the data for a new server
         # hostname is required
-        if "hostname" not in (kwargs):
+        if "hostname" not in (serverprops):
             raise CustomError("USER","Hostname is required for new servers")
         # role defaults to "replica"
-        if "role" not in (kwargs):
-            self.servers[servername]["role"] = "replica"
+        if "role" not in (serverprops):
+            serverprops["role"] = "replica"
         # this server will be added as enabled=False
-        self.servers[servername]["enabled"] = False
+        serverprops["enabled"] = False
         # so that we can clone it up later
         # add rest of settings
-        self.servers[servername] = self.merge_server_settings(servername, kwargs)
+        self.servers[servername] = self.merge_server_settings(servername, serverprops)
         # save everything
         self.write_servers()
         return return_dict(True, "new server saved")
@@ -1179,11 +1259,11 @@ class HandyRep(object):
             self.log("CLONE","Cloning %s failed" % replicaserver, True)
             return return_dict(False, "cloning failed, could not start replica")
 
-    def disable(self, replicaserver):
+    def disable(self, servername):
         # shutdown replica.  Don't check result, we don't really care
-        self.shutdown(replicaserver)
+        self.shutdown(servername)
         # disable from servers.save
-        self.servers[replicaserver]["enabled"] = False
+        self.servers[servername]["enabled"] = False
         self.write_servers()
         return return_dict(True, "server disabled")
 
@@ -1244,7 +1324,7 @@ class HandyRep(object):
             return serv
         else:
             # if all, return all servers
-            return servers
+            return self.servers
 
     def get_servers_by_role(self, serverrole, verify=True):
         # roles: master, replica
@@ -1327,39 +1407,44 @@ class HandyRep(object):
         else:
             return return_dict(False, "verification failed", issues)
 
-    def alter_server_def(self, servername, **kwargs):
+    def alter_server_def(self, servername, **serverprops):
         # check for changes to server config which aren't allowed
-        if "role" in kwargs:
-            if kwargs["role"] != self.servers[servername]["role"]:
-                return return_dict(False, "Changes to server role not allowed.  Use promote or relcone instead")
-
-        if "enabled" in kwargs:
-            # are we enabling or disabling the server?
-            if kwargs["enabled"] and not self.servers[servername]["enabled"]:
-                self.enable(servername)
-            elif not kwargs["enabled"] and self.servers[servername]["enabled"]:
-                self.disable(servername)
-
-        if "status" in kwargs or "status_no" in kwargs:
-            return return_dict(False, "You may not manually change server status")
-
-        if "role" in kwargs:
+        olddef = self.servers[servername]
+        
+        if "role" in serverprops:
             # can't change a replica to a master this way, or vice-versa
             # unless the server is already disabled
-            if self.servers[servername]["enabled"]:
-                if ( kwargs["role"] == "master" and self[servername]["role"] == "replica" ) or ( kwargs["role"] == "replica" and self[servername]["role"] == "master" ):
-                    return return_dict(False, "You may not change a replica into a master or vice-versa without calling the cloning and remastering functions.")
-                
+            newrole = serverprops["role"]
+            if serverprops["role"] != olddef["role"] and olddef["enabled"] and (olddef["role"] in ("replica", "master") or serverprops["role"] in ("replica", "master"))
+                return return_dict(False, "Changes to server role for enabled servers in replication not allowed.  Use promote, disable and/or clone instead")
+        else:
+            newrole = olddef["role"]
+
+        if newrole in ("replica", "master"):
+            inreplication = True
+
+        if "status" in serverprops or "status_no" in serverprops or "status_ts" in serverprops:
+            return return_dict(False, "You may not manually change server status")
+
         # verify servers
         # validate new settings
         # NOT currently validating settings
         # because of the insolvable catch-22 in doing so
-        #valids = self.validate_server_settings(servername, kwargs)
+        #valids = self.validate_server_settings(servername, serverprops)
         #if failed(valids):
         #    valids.update(return_dict(False, "the settings you supplied do not validate"))
         #    return valids
         # merge and sync server config
-        self.servers[servername] = self.merge_server_settings(servername, kwargs)
+        self.servers[servername] = self.merge_server_settings(servername, serverprops)
+        
+        # enable servers
+        if "enabled" in serverprops and inreplication:
+            # are we enabling or disabling the server?
+            if serverprops["enabled"] and not olddef["enabled"]:
+                self.enable(servername)
+            elif not serverprops["enabled"] and olddef["enabled"]:
+                self.disable(servername)
+        
         self.write_servers()
         # exit with success
         return return_dict(True, "Server definition changed", {"definition" : self.servers[servername]})
@@ -1383,7 +1468,7 @@ class HandyRep(object):
         archrun = self.get_plugin(archiveinfo["archive_delete_method"])
         return archrun.run(expire_hours)
 
-    def push_replica_conf(self, replicaserver):
+    def push_replica_conf(self, replicaserver, newmaster=None):
         # write new recovery.conf per servers.save
         servconf = self.servers[replicaserver]
         rectemp = servconf["recovery_template"]
@@ -1397,7 +1482,9 @@ class HandyRep(object):
             if archconf[archive_server] <> replicaserver:
                 recparam["archive_host"] = servconf["hostname"]
         # build the connection string
-        masterconf = self.servers[self.get_master_name()]
+        if not newmaster:
+            newmaster = self.get_master_name()
+        masterconf = self.servers[newmaster]
         recparam["replica_connection"] = "host=%s port=%s user=%s application_name=%s" % (masterconf["hostname"], masterconf["port"], self.conf["handyrep"]["replication_user"], replicaserver,)
         # set up fabric
         env.key_filename = self.servers[replicaserver]["ssh_key"]
@@ -1544,8 +1631,8 @@ class HandyRep(object):
     def connection(self, servername, autocommit=False):
         connect_string = "dbname=%s host=%s port=%s user=%s application_name=handyrep " % (self.conf["handyrep"]["handyrep_db"], self.servers[servername]["hostname"], self.servers[servername]["port"], self.conf["handyrep"]["handyrep_user"],)
 
-        if self.conf["handyrep"]["handyrep_db_pass"]:
-                connect_string += " password=%s " % self.conf["handyrep"]["handyrep_db_pass"]
+        if self.conf["passwords"]["handyrep_db_pass"]:
+                connect_string += " password=%s " % self.conf["passwords"]["handyrep_db_pass"]
 
         try:
             conn = psycopg2.connect( connect_string )
@@ -1679,4 +1766,28 @@ class HandyRep(object):
         disconnect_all()
         return result
 
+    def authenticate(self, username, userpass, funcname):
+        # simple authentication function which
+        # authenticates the user against the passwords
+        # set in handyrep.conf
+        # should probably be replaced with something more sophisticated
+        # you'll notice we ignore the username, for example
+        
+        # is this a readonly function?
+        rofunclist = ["get_status","get_server_info","get_cluster_status","get_servers_by_role",]
+
+        # try admin password
+        if userpass == self.conf["passwords"]["admin_password"]:
+            return return_dict(True, "password accepted")
+        elif userpass == self.conf["passwords"]["read_password"]:
+            if funcname in rofunclist:
+                return return_dict(True, "password accepted")
+            else:
+                return return_dict(False, "That feature requires admin access")
+        else:
+            return return_dict(False, "password rejected")
+
+    def authenticate_bool(self, username, userpass, funcname):
+        # simple boolean response to the above for the web daemon
+        return succeeded(self.authenticate(username, userpass, funcname))
         

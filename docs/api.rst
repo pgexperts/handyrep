@@ -1,11 +1,22 @@
 HandyRep Library API
 ====================
 
+Web vs. Library Access
+----------------------
+
+The API below is the full library API for importing HandyRep as a class.
+The vast majority of these functions are also available via the web API, with
+identical parameters as described.  A few functions are marked as
+"Not available in web API".
+
 General
 =======
 
 Initialization
 --------------
+
+If calling HandyRep as a library, it needs to be initialized.  In the
+web services version, this is the reason for the daemonfunctions.py module.
 
 ::
     HandyRep
@@ -26,7 +37,8 @@ is malformatted.
 Return Types
 ------------
 
-All APIs return dictionaries, for easy conversion to JSON and other formats.  Most of the
+All APIs return dictionaries, for easy conversion to JSON and other formats.  In the
+web API, these are returned as JSON but have identical layout. Most of the
 time, this return is in the format of the "return dictionary", or RD:
 
 ::
@@ -214,6 +226,48 @@ numlines
     how many lines of the log to retrieve
 
 
+get_setting
+-----------
+
+Retrieves a single configuration setting.
+
+::
+
+    get_setting
+        setting_name string OR list
+
+setting_name
+    can be either a string for a single setting, or a list which is the full path
+    to that setting in conf.  If just a string, the setting is assumed to be in the
+    "handyrep" section.
+
+Note: the Web API has a slightly different version of this function, which can't return
+settings from nested sections:
+
+::
+
+    get_setting
+        category string default "handyrep"
+        setting string
+
+category
+    section of the config
+
+setting
+    the individual setting name
+
+In either case, get_setting will refuse to return anything in the "passwords" section.
+
+set_verbose
+-----------
+
+Toggles verbose logging.
+
+::
+
+    set_verbose
+        verbose boolean default True
+
 
 Availability API
 ================
@@ -236,6 +290,9 @@ to check if a failover is required and update the status of all servers.
 Wraps most of the other availability functions.  Updates the status
 dictionary.  Performs an auto_failover if a failover is required,
 and if auto_failover is configured.
+
+This function is not available through the Web API, is it is invoked only
+by the Periodic portion of that daemon.
 
 ::
 
@@ -264,7 +321,8 @@ handyrep.conf.  Generally one runs with verify=False more frequently (the poll_i
 poll_master
 -----------
 
-Uses the configured polling method to check the master for availability.  Updates the status dictionary in the process.  Can only determine up/down,
+Uses the configured polling method to check the master for availability.
+Updates the status dictionary in the process.  Can only determine up/down,
 and cannot determine if the master has issues; as a result, will not
 change "warning" to "healthy".  Also checks that the master is actually
 a master and not a replica.
@@ -282,16 +340,17 @@ FAIL:
     current master is not responding to polling, or the handyrep or polling
     method configuration is wrong
 
-poll_server
------------
+poll
+----
 
-Uses the configured polling method to check the designated server for availability.  Updates the status dictionary in the process.  Can only determine up/down,
+Uses the configured polling method to check the designated server for availability.
+Updates the status dictionary in the process.  Can only determine up/down,
 and cannot determine if the master has issues; as a result, will not
 change "warning" to "healthy".
 
 ::
 
-    poll_server
+    poll
         servername
 
 Returns RD
@@ -334,6 +393,8 @@ Checks the master server to make sure it's fully operating, including checking
 that we can connect, we can write data, and that ssh and control commands
 are available.  Updates the status dictionary.
 
+Not available in web API, see "verify_server" below.
+
 ::
 
     verify_master
@@ -363,6 +424,8 @@ Checks that the replica is running and is in replication.  Also checks
 that we can connect to the database and that we have a working
 control connection for the server.  Uses the replication_status plugin.  Updates the status dictionary.
 
+Not available in web API, see "verify_server" below.
+
 ::
 
     verify_replica
@@ -391,6 +454,8 @@ verify_server
 
 Shell function for verify_replica and verify_master, which checks the role
 of the server and then runs the appropriate check.
+
+This function is available through the Web API as the way to access verify_master or verify_replica.
 
 verify_all
 ----------
@@ -669,21 +734,57 @@ information about servers once servers.save has been created.
 
     alter_server_def
         servername ServerName
-        kwargs
+        serverprops
 
 servername
     The existing server whose details are to be changed.
 
-kwargs
+serverprops
     a set of key-value pairs for settings to change.  Settings
     may be "changed" to the existing value, so it is permissible
     to pass in an entire dictionary of the server config with
     one changed setting.
 
-Returns RD with extra fields
+Note that serverprops may need special handling in the Web API, since URLs only
+accept strings.  See the Web Service Daemon documentation.
+
+Returns RD with extra fields:
 
 definition
     the resulting new definition for the server
+
+add_server
+----------
+
+Change details of a server after initialization.  Required
+because the .conf file is not considered the canonical
+information about servers once servers.save has been created.
+
+::
+
+    add_server
+        servername string
+        serverprops
+
+servername
+    The existing server whose details are to be changed.
+
+serverprops
+    a set of key-value pairs for server settings.  Note that the
+    hostname setting is required, and the new server will be
+    rejected without it.
+
+Note that serverprops may need special handling in the Web API, since URLs only
+accept strings.  See the Web Service Daemon documentation.
+
+New servers are always added as "disabled", and need to be enabled as a
+separate action.  Further, "role" defaults to "replica" if not supplied.
+
+Returns RD with extra fields:
+
+definition
+    the resulting new definition for the server
+    
 
 clean_archive
 -------------
@@ -714,7 +815,7 @@ connection_proxy_init
 ---------------------
 
 Set up the connection proxy configuration according to the configured
-connection failover plugin.  Not all plugins support initialization.
+connection failover plugin.  Not all connection proxy plugins support initialization.
 
 ::
 
@@ -729,10 +830,6 @@ SUCCESS
 FAIL
     error in pushing new configuration, or proxy does not support
     initialization
-
-
-    
-    
 
 
 

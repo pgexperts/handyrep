@@ -29,7 +29,7 @@ class clone_basebackup(HandyRepPlugin):
             "host" : self.servers[clonefrom]["hostname"],
             "port" : self.servers[clonefrom]["port"],
             "user" : self.conf["handyrep"]["replication_user"],
-            "pass" : self.conf["handyrep"]["replication_pass"]})
+            "pass" : self.conf["passwords"]["replication_pass"]})
         pgbbcmd = "%(path)s -x -D %(pgdata)s -h %(host)s -p %(port)d -U %(user)s %(extra)s" % bbparam
         cloneit = self.run_as_replication(servername, [pgbbcmd,])
         return cloneit
