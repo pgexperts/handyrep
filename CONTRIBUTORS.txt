@@ -10,10 +10,12 @@ The PostgreSQL Experts Team, including:
 Other Contributors include:
 
 * Zonar Systems
+* SwitchFly
 
 A Special Thanks to the following people, who helped make HandyRep possible:
 
 * The helpful folks on the #python channel on irc.freenode.net
 * Jeff Forcier of the Fabric project
 * The contributors to the PostgreSQL Project
+* The Flask team for making web services easy
 * The Vagrant and VirtualBox teams for awesome testing software

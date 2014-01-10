@@ -6,11 +6,9 @@ def failover_check(poll_cycle):
     else:
         pollno = poll_cycle
 
-    print "poll num: %d" % pollno
+    print "failover check no. %d" % pollno
 
     pollresult = hrdf.failover_check(pollno)
-
-    print pollresult
 
     return pollresult
 
