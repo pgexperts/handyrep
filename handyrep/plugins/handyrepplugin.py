@@ -13,6 +13,7 @@ import psycopg2
 import psycopg2.extensions
 from os.path import join
 from subprocess import call
+import re
 
 class HandyRepPlugin(object):
 
@@ -292,5 +293,28 @@ class HandyRepPlugin(object):
 
     def exstr(self, errorobj):
         return exstr(errorobj)
-    
+
+    def is_true(self, confstr):
+        if confstr:
+            if type(confstr) is bool:
+                return confstr
+            if confstr.lower() in ("1","on","true"):
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def as_int(self, confstr):
+        if confstr:
+            if type(confstr) is int:
+                return confstr
+            else:
+                if re.match(r'\d+$',confstr):
+                    return int(confstr)
+                else:
+                    return None
+        else:
+            return None
+            
     

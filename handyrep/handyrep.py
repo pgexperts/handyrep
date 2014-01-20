@@ -359,7 +359,7 @@ class HandyRep(object):
                 self.servers[server] = self.merge_server_settings(server)
                 
             # populate self.status
-            self.status = self.clusterstatus()
+            self.status.update(self.clusterstatus())
 
         elif use_conf == "file":
             # set self.servers to the file data
@@ -371,7 +371,7 @@ class HandyRep(object):
             # set self.servers to servers field
             self.servers = dbconf[2]
             # set self.status to status field
-            self.servers = dbconf[3]
+            self.status = dbconf[3]
 
         # update the pid
         self.status["pid"] = os.getpid()
@@ -415,15 +415,14 @@ class HandyRep(object):
             if sconn:
                 dbconf = get_one_row(scur,"""SELECT * FROM %s """ % self.tabname)
                 if dbconf:
-                    if dbconf[0] < self.serv_updated:
-                        try:
-                            cur.execute("UPDATE " + tabname + """ SET updated = %s,
-                            config = %s, servers = %s, status = %s""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),json.dumps(self.status),))
-                        except Exception as e:
-                                # something else is wrong, abort
-                            sconn.close()
-                            self.log("DBCONN","Unable to write HandyRep table to database for unknown reasons, please fix: %s" % e.pgerror, True)
-                            return False
+                    try:
+                        scur.execute("UPDATE " + tabname + """ SET updated = %s,
+                        config = %s, servers = %s, status = %s""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),json.dumps(self.status),))
+                    except Exception as e:
+                            # something else is wrong, abort
+                        sconn.close()
+                        self.log("DBCONN","Unable to write HandyRep table to database for unknown reasons, please fix: %s" % exstr(e), True)
+                        return False
                 else:
                     self.init_handyrep_db()
                 sconn.commit()
@@ -443,10 +442,15 @@ class HandyRep(object):
 
     def poll(self, servername):
         # poll servers, according to role
-        if self.is_master(servername):
+        servrole = self.servers[servername]["role"]
+        if servrole == "master":
             return self.poll_master()
-        else:
+        elif servrole == "replica":
             return self.poll_server(servername)
+        elif servrole in ["pgbouncer", "proxy",]:
+            return self.poll_proxies(servername)
+        else:
+            return return_dict(False, "no polling defined server role %s" % servrole)
 
     def poll_master(self):
         # check master using poll method
@@ -522,7 +526,21 @@ class HandyRep(object):
         if rep_count == 0:
             ret.update({"details":ret["details"] + " and no working replica found","failover_ok":False})
 
+        # finally, poll proxies.  we ignore this for the overall
+        # result of the poll, it's just so we update statuses
+        self.poll_proxies()
+        
+        self.write_servers()
         return ret
+
+    def poll_proxies(self, proxyserver=None):
+        # polls all the connection proxies
+        if self.conf["failover"]["poll_connection_proxy"] and self.conf["failover"]["connection_failover_method"]:
+            polprox = self.get_plugin(connection_failover_method)
+            polres = polprox.poll(proxyserver)
+            return polres
+        else:
+            return return_dict(True, "no proxies to poll")
             
 
     def verify_master(self):
@@ -655,11 +673,16 @@ class HandyRep(object):
             # disabled servers always return success
             # after all, they're supposed to be disabled
             return return_dict(True, "server disabled")
-            
-        if self.servers[servername]["role"] == "master":
+
+        servrole = self.servers[servername]["role"]
+        if servrole == "master":
             return self.verify_master()
-        else:
+        elif servrole == "replica":
             return self.verify_replica(servername)
+        elif servrole in ["pgbouncer", "proxy",]:
+            return self.poll_proxies(servername)
+        else:
+            return return_dict(False, "no polling defined server role %s" % servrole)
 
     def verify_all(self):
         # verify all servers, preparatory to listing
@@ -703,6 +726,11 @@ class HandyRep(object):
         if rep_count == 0:
             vertest.update({"details" : vertest["details"] + " and no working replica found","failover_ok":False})
 
+        # finally, poll proxies.  we ignore this for the overall
+        # result of the poll, it's just so we update statuses
+        self.poll_proxies()
+
+        self.write_servers()
         return vertest
 
     def check_replica(self, replicaserver):
@@ -916,9 +944,9 @@ class HandyRep(object):
                         # we don't fail back if they fail, though
                         if failed(self.extra_failover_commands(replica)):
                             self.cluster_status_update("warning","postfailover commands failed")
-                            return(True, "Failed over, but postfailover scripts did not succeed")
+                            return return_dict(True, "Failed over, but postfailover scripts did not succeed")
                             
-                        return(True, "Failover to %s succeeded" % replica)
+                        return return_dict(True, "Failover to %s succeeded" % replica)
                     else:
                         # augh.  promotion succeeded but we can't fail over
                         # the connections.  abort

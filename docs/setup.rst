@@ -35,7 +35,7 @@ Note that this does mean that the various servers in your cluster can have diffe
 
 Each node also needs the following software:
 
-* PostgreSQL 9.2 or later
+* PostgreSQL 9.1 or later
 * sudo
 * sshd
 
@@ -54,7 +54,7 @@ HandyRep runs as a designated user on the HandyRep server, usually "handyrep".  
 * passwordless sudo on all nodes
 * a writeable home directory on each node
 * ability to psql as postgres to all PostgreSQL servers in the cluster, using an md5 password.
-* a "handyrep" user in the database, with md5 login and the right to create schema and tables.
+* a "handyrep" user in the database, with superuser permissions.
 * ability to overwrite the archiving script, if applicable.
 
 In some cases, the HandyRep server may also be a node for one service or another, so also make sure that the handyrep user has ssh key login on its own server.

@@ -9,8 +9,9 @@ class archive_delete_find(HandyRepPlugin):
 
     def run(self):
         archiveinfo = self.conf["archive"]
+        delmin = (as_int(self.conf["plugins"]["archive_delete_find"]["archive_delete_hours"]) * 60)
         archiveserver = self.servers[archiveinfo["archive_server"]]
-        find_delete = """find %s -regextype 'posix-extended' -maxdepth 1  -mmin +%d -regex '.*[0-9A-F]{24}' -delete""" % (archiveinfo["archive_directory"],archiveinfo["archive_delete_hours"] * 60,)
+        find_delete = """find %s -regextype 'posix-extended' -maxdepth 1  -mmin +%d -regex '.*[0-9A-F]{24}' -delete""" % (archiveinfo["archive_directory"],delmin,)
         adelete = self.sudorun(archiveserver,find_delete,archiveinfo["archive_owner"])
         if self.succeeded(adelete):
             return adelete

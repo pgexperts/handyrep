@@ -5,7 +5,7 @@
 
 [pgbouncer]
 pool_mode = session
-listen_port = 6543
+listen_port = 6432
 listen_addr = *
 auth_type = md5
 auth_file = /etc/pgbouncer/userlist.txt
@@ -21,6 +21,6 @@ logfile = /var/log/postgresql/pgbouncer.log
 log_connections = 0
 log_disconnections = 0
 
-pidfile = /var/run/pgbouncer.pid
+pidfile = /tmp/pgbouncer.pid
 admin_users = postgres
 stats_users = postgres

@@ -117,6 +117,29 @@ Statuses for individual servers are as follows:
 5 : "down"
     server is verified down.
 
+server roles
+------------
+
+Servers each assigned a "role" which is required (as is a hostname).  Currently defined roles are:
+
+master
+    current or past PostgreSQL replication master
+
+replica
+    current or past PostgreSQL replica database
+
+proxy
+    current or past connection proxy for database connections
+
+pgbouncer
+    same as "proxy", just specifically pgbouncer
+
+archive
+    server/storage which only holds archive files.  Note that archive servers
+    are not polled, so status information is not updated.
+
+Servers can be created with other, user-defined roles, and certain plugins may create servers with additional roles.  In general, servers with roles other than the first four above will not be polled or verified, and as a result their "status" information will be meaningless.
+
 
 get_status
 ----------
