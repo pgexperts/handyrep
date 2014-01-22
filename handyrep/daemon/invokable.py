@@ -57,9 +57,6 @@ def promote(newmaster=None):
 def remaster(replicaserver=None, newmaster=None):
     return hrdf.remaster(replicaserver, newmaster)
 
-def add_server(servername=None, **kwargs):
-    return hrdf.add_server(servername, **kwargs)
-
 def clone(replicaserver=None,reclone="False",clonefrom=None):
     return hrdf.clone(replicaserver, reclone, clonefrom)
 
@@ -72,11 +69,11 @@ def enable(servername):
 def remove(servername):
     return hrdf.remove(servername)
 
-def alter_server_def(servername, **serverprops):
-    return hrdf.alter_server_def(servername, **serverprops)
+def alter_server_def(servername, **kwargs):
+    return hrdf.alter_server_def(servername, **kwargs)
 
-def add_server(servername, **serverprops):
-    return hrdf.add_server(servername, **serverprops)
+def add_server(servername, **kwargs):
+    return hrdf.add_server(servername, **kwargs)
 
 def connection_failover(newmaster=None):
     return hrdf.connection_failover(newmaster)

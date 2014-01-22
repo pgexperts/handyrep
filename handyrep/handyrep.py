@@ -283,8 +283,8 @@ class HandyRep(object):
             if not has_schema:
                 execute_it(mcur, """CREATE SCHEMA "%s" """ % hschema, [])
 
-            execute_it(mcur, """CREATE TABLE %s ( updated timestamptz, config JSON, servers JSON, status JSON )""" % self.tabname, [])
-            execute_it(mcur, "INSERT INTO" + self.tabname + " VALUES ( %s, %s, %s )""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),))
+            execute_it(mcur, """CREATE TABLE %s ( updated timestamptz, config JSON, servers JSON, status JSON, last_ip inet, last_sync timestamptz )""" % self.tabname, [])
+            execute_it(mcur, "INSERT INTO" + self.tabname + " VALUES ( %s, %s, %s, inet_client_addr(), now() )""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),))
 
         # done
         mconn.commit()
@@ -416,8 +416,9 @@ class HandyRep(object):
                 dbconf = get_one_row(scur,"""SELECT * FROM %s """ % self.tabname)
                 if dbconf:
                     try:
-                        scur.execute("UPDATE " + tabname + """ SET updated = %s,
-                        config = %s, servers = %s, status = %s""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),json.dumps(self.status),))
+                        scur.execute("UPDATE " + self.tabname + """ SET updated = %s,
+                        config = %s, servers = %s, status = %s,
+                        last_ip = inet_client_addr(), last_sync = now()""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),json.dumps(self.status),))
                     except Exception as e:
                             # something else is wrong, abort
                         sconn.close()
