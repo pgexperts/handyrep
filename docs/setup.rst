@@ -81,6 +81,55 @@ HandyRep may be programmed to work with pgBouncer, HAProxy, S3, Barman, WAL-E, B
 
 If you are using these other services, and expect HandyRep to manage them during failover, then it needs permissions to modify the service's configuration or give it directions.  For example, if using the pgbouncer plugin, then HandyRep needs the ability to rewrite pgbouncer.ini and restart pgbouncer, which would mean SSH and Sudo access on that server.
 
+Example Setup Narrative
+=======================
+
+Sally Admin is setting up HandyRep to provide high-availability for a four-server cluster, which contains:
+
+* db01: Initial PostgreSQL master
+* db02: Initial PostgreSQL replica
+* pgb01: pgBouncer server 1, and handyrep server
+* pgb02: pgBouncer server 2
+
+Sally has the following server environment:
+
+* Ubuntu 12.04
+* PostgreSQL 9.2.6
+* Apache/mod_wsgi
+* Relatively small database ("app-prod")
+* No archiving/DR set up at this time (relying on pgdumps)
+* HandyRep doesn't modify external load-balancing for the pgbouncer servers.
+* No auto-vivification for Postgres service
+
+She's also working under the following requirements:
+
+* 5 minute failover window
+* Up to 1 minute of data loss permitted
+
+Setting up pgb01
+----------------
+
+Sally installs the following from apt-get (using apt.postgresql.org for some):
+
+* PostgreSQL-9.3-client
+* pgbouncer
+* python-pip
+* psycopg2
+* Apache
+* mod_wsgi
+
+In order to get current versions, she installs the following into a virtualenv using pip:
+
+* flask
+* fabric
+* ConfigObj
+* jinja2
+
+She then creates a "handyrep" user with its own home directory, and adds that user to the "admins" group.  She uses visudo to modify the admins group to not require a password for sudo.
+
+Switching to the handyrep user, she generates an ssh key, and then copies that public key to that user's authorized_keys.
+
+
 handyrep.conf
 =============
 

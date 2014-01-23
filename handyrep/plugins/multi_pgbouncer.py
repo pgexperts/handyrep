@@ -70,7 +70,7 @@ class multi_pgbouncer(HandyRepPlugin):
         self.servers[bouncerserver]["status"] = status
         self.servers[bouncerserver]["status_no"] = status_no
         self.servers[bouncerserver]["status_message"] = status_message
-        self.servers[bouncerserver]["status_ts"] = self.now_string
+        self.servers[bouncerserver]["status_ts"] = self.now_string()
         return
 
     def push_config(self, bouncerserver, newmaster=None):

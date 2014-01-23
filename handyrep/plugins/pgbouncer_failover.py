@@ -49,7 +49,7 @@ class pgbouncer_failover(HandyRepPlugin):
 
     def poll(self, bouncerserver=None):
         # ignore bouncerserver param, since there's only one
-        myconf = self.conf["pgbouncer_failover"]
+        myconf = self.conf["plugins"]["pgbouncer_failover"]
         bserv = myconf["server"]
         
         try:

@@ -537,7 +537,7 @@ class HandyRep(object):
     def poll_proxies(self, proxyserver=None):
         # polls all the connection proxies
         if self.conf["failover"]["poll_connection_proxy"] and self.conf["failover"]["connection_failover_method"]:
-            polprox = self.get_plugin(connection_failover_method)
+            polprox = self.get_plugin(self.conf["failover"]["connection_failover_method"])
             polres = polprox.poll(proxyserver)
             return polres
         else:
