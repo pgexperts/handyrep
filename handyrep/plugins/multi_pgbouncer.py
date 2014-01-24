@@ -177,9 +177,11 @@ class multi_pgbouncer(HandyRepPlugin):
                         repno += 1
         else:
             # only one readonly replica, setting it up with _ro
-            if replicas[0] == master:
-                # avoid the master
-                replicas.pop(0)
+            if len(replicas) > 0:
+                if replicas[0] == master:
+                    # avoid the master
+                    replicas.pop(0)
+                    
             if len(replicas) > 0:
                 constr += self.dbconnect_line(myconf["database_list"], self.servers[replicas[0]]["hostname"], self.servers[replicas[0]]["port"], myconf["readonly_suffix"], myconf["extra_connect_param"])
             else:

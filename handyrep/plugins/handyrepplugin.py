@@ -229,12 +229,12 @@ class HandyRepPlugin(object):
         time.sleep(self.conf["failover"]["fail_retry_interval"])
         return
 
-    def sorted_replicas(self, maxstatus=3):
+    def sorted_replicas(self, maxstatus=2):
         # returns a list of currently enabled and running replicas
         # sorted by failover_priority
         goodreps = {}
         for serv, servdeets in self.servers.iteritems():
-            if servdeets["enabled"] and servdeets["status_no"] <= maxstatus:
+            if servdeets["enabled"] and servdeets["status_no"] <= maxstatus and servdeets["role"] == "replica":
                 goodreps[serv] = servdeets["failover_priority"]
 
         sreps = sorted(goodreps,key=goodreps.get)
@@ -298,7 +298,7 @@ class HandyRepPlugin(object):
         if confstr:
             if type(confstr) is bool:
                 return confstr
-            if confstr.lower() in ("1","on","true"):
+            if confstr.lower() in ("1","on","true","yes"):
                 return True
             else:
                 return False
