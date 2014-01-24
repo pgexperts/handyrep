@@ -258,8 +258,12 @@ class HandyRep(object):
             servfile = open(self.conf["handyrep"]["server_file"],'r')
         except:
             return None
-        else:
+
+        try:
             serverdata = json.load(servfile)
+        except:
+            return None
+        else:
             servfile.close()
             return serverdata
 
@@ -654,8 +658,23 @@ class HandyRep(object):
         repinfo = repstatus.run(replicaserver)
         # if the above fails, we can't connect to the master
         if failed(repinfo):
-            self.status_update(replicaserver, "warning", "cannot check replication status")
+            # check that the master is already known to be down
+            master = self.get_master_name()
+            if master:
+                if self.servers[master]["status_no"] in [4, 5,]:
+                    # ok, we knew the master was down already,  don't change the status
+                    # of the replica, just the status message
+                        self.status_update(replicaserver, self.servers[replicaserver]["status"], "master down, keeping old replication status")
+                else:
+                    # something else is wrong, set replica to warning
+                    self.status_update(replicaserver, "warning", "cannot check replication status")
+            else:
+                # no master? oh-oh
+                # well, we certainly don't want to fail over ...
+                self.status_update(replicaserver, "warning", "cannot check replication status because there is no configured master")
+                
             return return_dict(True, "cannot check replication status")
+
         # check that we're in replication
         if not repinfo["replicating"]:
             self.status_update(replicaserver, "unavailable", "replica is not in replication")
@@ -694,21 +713,27 @@ class HandyRep(object):
         vertest = return_dict(False, "no master found")
         master_count = 0
         rep_count = 0
+
+        #we need to verify the master first, so that
+        #we don't mistakenly decide that the replicas
+        #are disabled
+        mcheck = self.verify_master()
+        mserver = self.get_master_name()
+        if succeeded(mcheck):
+            vertest.update({ "result" : "SUCCESS",
+                "details" : "master check passed",
+                "failover_ok" : True,
+                mserver : mcheck })
+        else:
+            vertest.update({ "result" : "FAIL",
+                "details" : "master check failed",
+                "failover_ok" : True,
+                mserver : mcheck })
+        
         for server, servdetail in self.servers.iteritems():
             if servdetail["enabled"]:
                 if servdetail["role"] == "master":
-                    mcheck = self.verify_master()
                     master_count += 1
-                    if succeeded(mcheck):
-                        vertest.update({ "result" : "SUCCESS",
-                            "details" : "master check passed",
-                            "failover_ok" : True,
-                            server : mcheck })
-                    else:
-                        vertest.update({ "result" : "FAIL",
-                            "details" : "master check failed",
-                            "failover_ok" : True,
-                            server : mcheck })
                 elif servdetail["role"] == "replica":
                     vertest[server] = self.verify_replica(server)
                     if succeeded(vertest[server]):

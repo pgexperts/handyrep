@@ -40,7 +40,8 @@ class multi_pgbouncer(HandyRepPlugin):
             blist = [bouncerserver,]
         else:
             blist = self.bouncer_list()
-            
+
+        master = self.get_master_name()
         faillist = []
         for bserv in blist:
             bpush = self.push_config(bserv, master)
@@ -162,7 +163,7 @@ class multi_pgbouncer(HandyRepPlugin):
             dblist.append(self.conf["handyrep"]["handyrep_db"])
         constr = self.dbconnect_line(dblist, self.servers[master]["hostname"], self.servers[master]["port"], "", myconf["extra_connect_param"])
         replicas = self.sorted_replicas()
-        if is_true(myconf["all_replicas"]):
+        if self.is_true(myconf["all_replicas"]):
             #if we're doing all replicas, we need to put them in as _ro0, _ro1, etc.
             # if there's no replicas, set ro1 to go to the master:
             if len(replicas) == 0 or (len(replicas) == 1 and master in replicas):

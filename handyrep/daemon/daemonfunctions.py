@@ -191,7 +191,7 @@ def add_server(servername, **serverprops):
             "details" : "server name is required" }
     else:
         margs = map_server_args(serverprops)
-        return hr.alter_server_def(servername, **margs)
+        return hr.add_server(servername, **margs)
 
 def alter_server_def(servername, **serverprops):
     if not servername:

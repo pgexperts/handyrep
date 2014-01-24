@@ -129,6 +129,8 @@ She then creates a "handyrep" user with its own home directory, and adds that us
 
 Switching to the handyrep user, she generates an ssh key, and then copies that public key to that user's authorized_keys.
 
+She then downloads the handyrep code and installs it at 
+
 
 handyrep.conf
 =============
