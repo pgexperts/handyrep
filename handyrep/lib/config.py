@@ -3,6 +3,7 @@ from error import CustomError
 from validate import Validator
 from datetime import datetime
 import re
+import os
 
 class ReadConfig(object):
 
@@ -12,7 +13,7 @@ class ReadConfig(object):
     def read(self, validationfile=None):
         try:
             if validationfile:
-                config = ConfigObj(self.configfile,configspec=validationfile,stringify=True)
+                ConfigObj(self.configfile,configspec=validationfile,stringify=True)
             else:
                 config = ConfigObj(self.configfile)
         except:

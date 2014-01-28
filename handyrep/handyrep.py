@@ -20,8 +20,10 @@ class HandyRep(object):
     def __init__(self,config_file='handyrep.conf'):
         # read and validate the config file
         config = ReadConfig(config_file)
-        # need to figure out how to set the location for
-        self.conf = config.read('config/handyrep-validate.conf')
+        # get the absolute location of -validate.conf
+        # in order to support web services execution
+        validconf = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config/handyrep-validate.conf')
+        self.conf = config.read(validconf)
         try:
             logging.basicConfig(filename=self.conf["handyrep"]["log_file"], datefmt="%Y-%m-%d %H:%M:%S", format="%(asctime)-12s %(message)s")
         except Exception as ex:
