@@ -1,5 +1,8 @@
 # plugin method for deleting files from an archive
 # using the linux "find" commmand.
+# this only works if you have a configuration
+# with a single archive server which is
+# defined in the servers dictionary
 
 from plugins.handyrepplugin import HandyRepPlugin
 

@@ -9,10 +9,4 @@ recovery_target_timeline = 'latest'
 # replica connection
 primary_conninfo = '{{ replica_connection }}'
 
-{% if archive_directory %}
-    {% if archive_host %}
-restore_command = 'scp {{ archive_host }}:{{ archive_directory }}/%f %p'
-    {% else %}
-restore_command = 'cp {{ archive_directory }}/%f %p'
-    {% endif %}
-{% endif %}
+{{ archive_recovery_line }}

@@ -260,6 +260,52 @@ class HandyRepPlugin(object):
         else:
             return self.rd(True, "config passed")
 
+    def get_servers(self, **kwargs):
+        # loops through self.servers, returning
+        # servers whose criteria match kwargs
+        # returns a list of server names
+        servlist = []
+        # append "enabled" to criteria if not supplied
+        if "enabled" not in kwargs:
+            kwargs.update({ "enabled" : True })
+        elif kwargs["enabled"] is None:
+            # if None, then the user doesn't care
+            # about enabled status
+            del kwargs["enabled"]
+
+        for serv, servdeets in self.servers.iteritems():
+            for tag, val in kwargs.iteritems():
+                if tag in servdeets:
+                    if servdeets[tag] == val:
+                        servlist.append(serv)
+
+        return servlist
+
+    # type conversion functions for config files
+
+    def is_true(self, confstr):
+        if confstr:
+            if type(confstr) is bool:
+                return confstr
+            if confstr.lower() in ("1","on","true","yes"):
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def as_int(self, confstr):
+        if confstr:
+            if type(confstr) is int:
+                return confstr
+            else:
+                if re.match(r'\d+$',confstr):
+                    return int(confstr)
+                else:
+                    return None
+        else:
+            return None
+
     # the functions below are shell functions for stuff in
     # misc_utils and dbfunctions  they're created here so that
     # users don't need to reimport them when writing functions
@@ -294,27 +340,4 @@ class HandyRepPlugin(object):
     def exstr(self, errorobj):
         return exstr(errorobj)
 
-    def is_true(self, confstr):
-        if confstr:
-            if type(confstr) is bool:
-                return confstr
-            if confstr.lower() in ("1","on","true","yes"):
-                return True
-            else:
-                return False
-        else:
-            return False
-
-    def as_int(self, confstr):
-        if confstr:
-            if type(confstr) is int:
-                return confstr
-            else:
-                if re.match(r'\d+$',confstr):
-                    return int(confstr)
-                else:
-                    return None
-        else:
-            return None
-            
     

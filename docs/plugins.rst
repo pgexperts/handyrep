@@ -106,7 +106,107 @@ Polling method to use for PostgreSQL 9.3 and later.  Uses pg_isready to check if
 Archive Management Plugins
 --------------------------
 
-These plugins power the *archive_delete_method* directive in the configuration, giving you the command to call in order to clean the archive. 
+These plugins power the *archive_script_method* or *archive_delete_method* directive in the configuration to manage WAL archiving.  They are not called if the "archive" parameter in the configuration has been set to False.  Note that setting "archive" to False in the configuration does not change anything on the individual servers.
+
+archive_local_dir
+~~~~~~~~~~~~~~~~~
+
+_Parameters_
+
+servername
+    server to push the archive script to
+
+_Configuration_
+
+archive_directory
+    full path to directory where archive copies are kept
+    
+archive_script_path
+    full path to which to write the archive executable
+    
+archive_template
+    template to use for the archive.sh file
+    
+stop_archiving_file
+    full path of touch file to halt archving
+
+cleanup_archive
+    boolean: whether or not to run cleanup on
+    the archive directory using pg_archivecleanup
+    
+archivecleanup_path
+    full path to pg_archivecleanup
+
+_Extra Methods_
+
+recoveryline
+    returns archive recovery line or lines for recovery.conf
+    to handyrep.py, so that it can push a recovery.conf file
+
+poll
+    does nothing; put here to support the poll() call from verify_all()
+
+stop
+    pushes a noarchiving file to the current master to halt archiving
+
+start
+    pushes a new script, plus removes the noarchiving file, in order to
+    restart archiving on the master
+
+This plugin is meant for pushing archiving scripts to servers who write archives to a directory which is locally mounted, e.g. a SAN fileshare.  Cleanup_archive can be enabled or disabled; this is so that you can avoid having premature archive truncation in a system where a SAN-mounted archive is shared among several replicas.  In that case, you probably want to create an archive_delete_method.
+
+archive_two_servers
+~~~~~~~~~~~~~~~~~~~
+
+_Parameters_
+
+servername
+    server to push the archive script to
+
+_Configuration_
+
+archive_directory
+    full path to directory where archive copies are kept
+
+archive_script_path
+    full path to which to write the archive executable
+
+archive_template
+    template to use for the archive.sh file
+
+stop_archiving_file
+    full path of touch file to halt archving
+
+archivecleanup_path
+    full path to pg_archivecleanup
+
+disable_on_fail
+    whether or not to automatically disable archiving if the
+    replica no longer responds to ssh
+
+_Extra Methods_
+
+recoveryline
+    returns archive recovery line or lines for recovery.conf
+    to handyrep.py, so that it can push a recovery.conf file
+
+poll
+    checks if the replica is currently responding to SSH.  If not, it
+    will disable archiving if disable_on_fail is set.
+
+stop
+    pushes a noarchiving file to the current master to halt archiving
+
+start
+    pushes a new script, plus removes the noarchiving file, in order to
+    restart archiving on the master
+
+This plugin is meant for pushing archiving scripts in a two-server system, where there is always one master and one replica, or less.  In such a system, each server is constantly set up to archive to the other server.
+
+If disable_on_fail is true, then the replica is checked every Verify cycle.  If it doesn't respond to SSH, then the plugin will automatically push a noarchiving file to the master.
+
+*WARNING* this plugin will break if there is more than one enabled replica!
+
 
 archive_delete_find
 ~~~~~~~~~~~~~~~~~~~
@@ -118,9 +218,12 @@ _Configuration_
 archive_delete_hours
     number of hours of logs to retain
 
-Simple archive file management until which uses "find" from the Linux command line to delete all WAL files older than archive_delete_hours.  Note that file copying, moving, etc. can mess this method up.
+archive_directory
+    full path directory the archive files are kept in
 
-Makes use of archive_server and archive_directory from the main archive config section.
+Note: requires an "archive" server to be set up in the servers dictionary.
+
+Simple archive file management until which uses "find" from the Linux command line to delete all WAL files older than archive_delete_hours.  Note that file copying, moving, etc. can mess this method up.
 
 Replica Cloning Plugins
 -----------------------
