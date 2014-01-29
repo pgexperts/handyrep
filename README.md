@@ -18,9 +18,27 @@ Among its other useful features and advantages are:
 
 Further documentaton is found in the Docs folder.
 
+Support and Collaboration
+=========================
+
+Discussion of HandyRep usage and development can be found on the HandyRep
+Google Group: https://groups.google.com/forum/#!forum/handyrep
+
+The HandyRep project is located at http://handyrep.org
+
 Copyright
 =========
 
 HandyRep is copyright 2013-2014 PostgreSQL Experts Inc.  Portions copyright its individual contributors.
 
 It is available under The PostgreSQL License.  See LICENSE.txt for details.
+
+Trademark
+=========
+
+The HandyRep name and HandyRep logo are trademarks of PostgreSQL Experts Inc.  Permission to use
+this trademark is granted provided that such use is in reference to the HandyRep Project,
+software packages composed of the HandyRep Project's code, or usage or forks of the HandyRep Project code.  
+You may not state or imply, through such usage, ownership of the HandyRep trademark, or endorsement
+of any product, service, organization, or person by the HandyRep Project. Any other use requires
+written permission by PostgreSQL Experts, Inc.
