@@ -13,7 +13,7 @@ class ReadConfig(object):
     def read(self, validationfile=None):
         try:
             if validationfile:
-                ConfigObj(self.configfile,configspec=validationfile,stringify=True)
+                config = ConfigObj(self.configfile,configspec=validationfile,stringify=True)
             else:
                 config = ConfigObj(self.configfile)
         except:

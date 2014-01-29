@@ -21,6 +21,6 @@ class promote_pg_ctl(HandyRepPlugin):
         return runit
         
     def test(self, servername):
-        startcmd = self.get_pg_ctl_cmd(servername,j "status")
+        startcmd = self.get_pg_ctl_cmd(servername, "status")
         runit = self.run_as_postgres(servername, [startcmd,])
         return runit

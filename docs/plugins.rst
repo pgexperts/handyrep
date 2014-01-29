@@ -246,7 +246,7 @@ newmaster
 _Configuration_
 
 pgbouncerbin
-    full path to the pgbouncer executable
+    full path to the pgbouncer executable.  Used for restarting pgbouncer.
 
 template
     the pgbouncer.ini template file for overwriting pgbouncer.ini
@@ -283,10 +283,36 @@ If all_replicas is chosen, a digit is added to the end of the readonly suffix.  
 
 The included poll() method attempts to connect to each bouncer server using psql as the handyrep user and handyrep database (as configured).  pgbouncers which do not respond are marked unavailable.
 
-pgbouncer_failover
-~~~~~~~~~~~~~~~~~~
+multi_pgbouncer_pacemaker
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Materially the same as mulit_pgbouncer, but only supports one pgbouncer server.  As such, slated to be obsolesced.
+Configuration, Parameters and Methods identical to multi_pgbouncer.
+
+This plugin is for clusters where pgbouncer is managed by Pacemaker or some other management utility.  It does not restart pgbouncer if it's not already running, and makes the assumption that if pgbouncer is down, it's supposed to be down.  It only pushes an error if there are no pgbouncer servers running.
+
+multi_pgbouncer_bigip
+~~~~~~~~~~~~~~~~~~~~~
+
+Parameters the same as multi_pgbouncer.
+
+_Configuration_
+
+Same as multi_pgbouncer, plus:
+
+bigip_hostname
+    hostname of the bigip server
+    
+bigip_user
+    sudo username of the bigip administrator
+
+tmsh_path
+    full path to the tmsh executable
+
+Additionally, each pgbouncer server definition must include an ip_address field which is the bouncer's ip_address as seen by BigIP.  Also, one server must be created with the role "bigip".
+
+Additional methods the same as multi_pgbouncer.
+
+This configuration is for where load-balancing among pgbouncers is managed by the BigIP load-balancing utility.  In the event that a specific bouncer is not responding to configuration changes at failover, it will update BigIP to not loadbalance to that bouncer.  It does not do other updating of BigIP, except at failover time.
 
 PostgreSQL Management Plugins
 -----------------------------

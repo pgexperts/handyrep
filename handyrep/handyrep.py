@@ -601,9 +601,10 @@ class HandyRep(object):
             # return success,
             mconn.close()
             if issues:
-                self.status_update(master, "warning", "passed verification check but no SSH access", issues)
+                self.status_update(master, "warning", "passed verification check but no SSH access")
             else:
                 self.status_update(master, "healthy", "passed verification check")
+                
             return return_dict(True, "master OK")
 
     def verify_replica(self, replicaserver):
@@ -1693,6 +1694,7 @@ class HandyRep(object):
         try:
             conn = psycopg2.connect( connect_string )
         except:
+            self.log("ERROR: Unable to connect to Postgres using the connections string %s" % connect_string)
             raise CustomError("DBCONN","ERROR: Unable to connect to Postgres using the connections string %s" % connect_string)
 
         if autocommit:
@@ -1769,6 +1771,7 @@ class HandyRep(object):
         reptest = self.is_replica(mconn.cursor())
         if reptest:
             mconn.close()
+            self.log("Server configured as the master is actually a replica, aborting connection.", True)
             raise CustomError("CONFIG","Server configured as the master is actually a replica, aborting connection.")
         
         return mconn
