@@ -16,7 +16,7 @@ def startup_hr():
     else:
         # try environment variable next
         hrloc = os.getenv("HANDYREP_CONFIG")
-        
+
     if not hrloc:
         # need to go to handyrep base directory without relying on CWD
         # since CWD doesn't exist in webserver context
