@@ -16,10 +16,10 @@ def startup_hr():
     else:
         # try environment variable next
         hrloc = os.getenv("HANDYREP_CONFIG")
-    elif not hrloc:
+    if not hrloc:
         # need to go to handyrep base directory without relying on CWD
         # since CWD doesn't exist in webserver context
-        hrloc = os.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"handyrep.conf")
+        hrloc = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"handyrep.conf")
     hr = HandyRep(hrloc)
     return True
 
