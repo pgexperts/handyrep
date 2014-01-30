@@ -14,13 +14,13 @@
 
 from plugins.handyrepplugin import HandyRepPlugin
 
-class archive_two_server(HandyRepPlugin):
+class archive_two_servers(HandyRepPlugin):
 
     def run(self, servername):
         # pushes archive script
         # which is set up for two-server archiving
         archiveinfo = self.conf["archive"]
-        myconf = self.conf["plugins"]["archive_two_server"]
+        myconf = self.conf["plugins"]["archive_two_servers"]
         otherserv = self.other_server(servername)
         if not otherserv:
             return self.rd(False, "no other server configured for archving")
@@ -34,7 +34,7 @@ class archive_two_server(HandyRepPlugin):
 
     def recoveryline(self):
         # returns archive recovery line for recovery.conf
-        myconf = self.conf["plugins"]["archive_two_server"]
+        myconf = self.conf["plugins"]["archive_two_servers"]
         restcmd = "restore_command = cp %s" % myconf["archive_directory"]
         restcmd += "/%f %p\n\n"
         restcmd += "archive_cleanup_command = '%s %s" % (myconf["archive_directory"], myconf["archivecleanup_path"],) + "%r'\n"
@@ -47,6 +47,7 @@ class archive_two_server(HandyRepPlugin):
         # and then disables archiving depending
         # on settings via the stop archiving file
         repservs = self.get_servers(role="replica")
+        myconf = self.conf["plugins"]["archive_two_servers"]
         if not repservs:
             return self.rd("False","no currently configured replica")
         else:
@@ -75,6 +76,7 @@ class archive_two_server(HandyRepPlugin):
     def stop(self):
         # halts archiving on the master
         # by pushing a noarchving file
+        myconf = self.conf["plugins"]["archive_two_servers"]
         touchit = "touch %s" % myconf["stop_archiving_file"]
         disabled = self.run_as_postgres(self.get_master_name(),[touchit,])
         if succeeded(touchit):
@@ -84,6 +86,7 @@ class archive_two_server(HandyRepPlugin):
 
     def start(self):
         # push template first
+        myconf = self.conf["plugins"]["archive_two_servers"]
         master = self.get_master_name()
         if failed(self.run(master)):
             return self.rd(False, "unable to update archving script")
@@ -96,7 +99,7 @@ class archive_two_server(HandyRepPlugin):
             return self.rd(False, "Unable to create noarchiving file")
 
     def test(self, conf, servers, servername):
-        if self.failed(self.test_plugin_conf("archive_directory","archivecleanup_path","stop_archving_file","archive_script_template","archive_script_path")):
+        if self.failed(self.test_plugin_conf("archive_two_servers","archive_directory","archivecleanup_path","stop_archving_file","archive_script_template","archive_script_path")):
             return self.rd(False, "archive_two_servers is not configure")
         else:
             if self.failed(self.run_as_postgres(self.get_master_name(), [self.conf["handyrep"]["test_ssh_command"],])):

@@ -17,3 +17,12 @@ class failplugin(HandyRepPlugin):
 
     def test(self, *args, **kwargs):
         return self.rd( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )
+
+    def poll(self, *args, **kwargs):
+        return self.rd( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )
+
+    def start(self, *args, **kwargs):
+        return self.rd( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )
+
+    def stop(self, *args, **kwargs):
+        return self.rd( False,"broken plugin called or no such plugin exists: %s" % self.pluginname )

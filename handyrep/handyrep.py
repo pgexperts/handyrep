@@ -1650,12 +1650,12 @@ class HandyRep(object):
             return return_dict(True, "Post-failover commands executed")
         
 
-    def start_archving(self):
+    def start_archiving(self):
         # pushes a new archive script to the master
         # and initializes archiving
         # but WITHOUT changing postgresql.conf, so
         # you still need to do that
-        archconf = self.conf["archiving"]
+        archconf = self.conf["archive"]
         if archconf["archiving"] and archconf["archive_script_method"]:
             arch = self.get_plugin(archconf["archive_script_method"])
             startit = arch.start()
@@ -1663,12 +1663,12 @@ class HandyRep(object):
         else:
             return return_dict(False, "Cannot start archiving because it is not configured.")
 
-    def stop_archving(self):
+    def stop_archiving(self):
         # pushes a new archive script to the master
         # and initializes archiving
         # but WITHOUT changing postgresql.conf, so
         # you still need to do that
-        archconf = self.conf["archiving"]
+        archconf = self.conf["archive"]
         if archconf["archiving"] and archconf["archive_script_method"]:
             arch = self.get_plugin(archconf["archive_script_method"])
             startit = arch.stop()

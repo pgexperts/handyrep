@@ -22,7 +22,7 @@ Support and Collaboration
 =========================
 
 Discussion of HandyRep usage and development can be found on the HandyRep
-Google Group: https://groups.google.com/forum/#!forum/handyrep
+Google Group: http://groups.google.com/d/forum/handyrep
 
 The HandyRep project is located at http://handyrep.org
 
