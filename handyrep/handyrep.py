@@ -290,7 +290,7 @@ class HandyRep(object):
                 execute_it(mcur, """CREATE SCHEMA "%s" """ % hschema, [])
 
             execute_it(mcur, """CREATE TABLE %s ( updated timestamptz, config JSON, servers JSON, status JSON, last_ip inet, last_sync timestamptz )""" % self.tabname, [])
-            execute_it(mcur, "INSERT INTO" + self.tabname + " VALUES ( %s, %s, %s, inet_client_addr(), now() )""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),))
+            execute_it(mcur, "INSERT INTO" + self.tabname + " VALUES ( %s, %s, %s, %s, inet_client_addr(), now() )""",(self.status["status_ts"], json.dumps(self.conf), json.dumps(self.servers),json.dumps(self.status),))
 
         # done
         mconn.commit()
