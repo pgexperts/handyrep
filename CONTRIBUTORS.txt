@@ -7,10 +7,13 @@ The PostgreSQL Experts Team, including:
 * Jeff Frost
 * Quinn Weaver
 
+HandyRep includes a copy of the HDaemon code.   HDaemon can be found at: https://github.com/pgexperts/hdaemon
+
 Other Contributors include:
 
 * Zonar Systems
 * SwitchFly
+* Mike Roest
 
 A Special Thanks to the following people, who helped make HandyRep possible:
 

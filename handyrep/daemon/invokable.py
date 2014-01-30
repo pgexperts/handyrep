@@ -81,6 +81,12 @@ def connection_failover(newmaster=None):
 def connection_proxy_init():
     return hrdf.connection_proxy_init()
 
+def start_archiving():
+    return hrdf.start_archving()
+
+def stop_archiving():
+    return hrdf.stop_archiving()
+
 INVOKABLE = {
     "read_log" : read_log,
     "get_setting" : get_setting,
@@ -110,5 +116,7 @@ INVOKABLE = {
     "add_server" : add_server,
     "connection_failover" : connection_failover,
     "connection_proxy_init" : connection_proxy_init,
+    "start_archiving" : start_archiving,
+    "stop_archiving" : stop_archiving
 }
 

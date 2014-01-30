@@ -755,9 +755,21 @@ class HandyRep(object):
         if rep_count == 0:
             vertest.update({"details" : vertest["details"] + " and no working replica found","failover_ok":False})
 
-        # finally, poll proxies.  we ignore this for the overall
+        # poll proxies.  we ignore this for the overall
         # result of the poll, it's just so we update statuses
         self.poll_proxies()
+
+        # do some archive housekeeping if we're archiving
+        if self.conf["archive"]["archiving"]:
+            # invoke the poll method of the archive script, just
+            # in case anything is required
+            if self.conf["archive"]["archive_script_method"]:
+                arch = self.get_plugin(self.conf["archive"]["archive_script_method"])
+                arch.poll()
+            # do archive deletion cleanup, if required
+            if self.conf["archive"]["archive_delete_method"]:
+                adel = self.get_plugin(self.conf["archive"]["archive_delete_method"])
+                adel.run()
 
         self.write_servers()
         return vertest
@@ -1530,19 +1542,21 @@ class HandyRep(object):
         servconf = self.servers[replicaserver]
         rectemp = servconf["recovery_template"]
         archconf = self.conf["archive"]
-        recparam = { "archive_directory" : None,
-            "archive_host" : None }
-        #set archive recovery locations if we're using
-        #archiving
-        if archconf["archiving"]:
-            recparam["archive_directory"] = archconf["archive_directory"]
-            if archconf[archive_server] <> replicaserver:
-                recparam["archive_host"] = servconf["hostname"]
+        recparam = {}
+        # get recover-from-archive from archiving plugin
+        if archconf["archiving"] and archconf["archive_script_method"]:
+            arch = self.get_plugin(archconf["archive_script_method"])
+            recparam["archive_recovery_line"] = arch.recoveryline()
+        else:
+            recparam["archive_recovery_line"] = ''
+                
         # build the connection string
         if not newmaster:
             newmaster = self.get_master_name()
         masterconf = self.servers[newmaster]
+        
         recparam["replica_connection"] = "host=%s port=%s user=%s application_name=%s" % (masterconf["hostname"], masterconf["port"], self.conf["handyrep"]["replication_user"], replicaserver,)
+        
         # set up fabric
         env.key_filename = self.servers[replicaserver]["ssh_key"]
         env.user = self.servers[replicaserver]["ssh_user"]
@@ -1574,37 +1588,14 @@ class HandyRep(object):
     def push_archive_script(self, servername):
         # write a wal_archive executable script
         # to the server
-        archconf = self.conf["archive"]
-        # check config
-        if archconf["push_archive_script"]:
-            if not archconf["archive_template"]:
-                return { "result" : "FAIL", "details" : "archive template not configured" }
+        # calls plugin
+        if self.conf["archive"]["archiving"] and self.conf["archive"]["archive_script_method"]:
+            arch = self.get_plugin(self.conf["archive"]["archive_script_method"])
+            archit = arch.run(servername)
+            return archit
         else:
-            # if we're not pushing scripts, just return success
-            return { "result" : "SUCCESS", "details" : "pushing archive script disabled" }
-        # render the template and push it to 
-        # the server.
-        archtemp = archconf["archive_template"]
-        if archconf["archive_server"]:
-            archserv = self.servers[archconf["archive_server"]]
-            archconf["archive_host"] = archserv["hostname"]
-        else:
-            archconf["archive_host"] = "localhost"
-        env.key_filename = self.servers[servername]["ssh_key"]
-        env.user = self.servers[servername]["ssh_user"]
-        env.disable_known_hosts = True
-        env.host_string = self.servers[servername]["hostname"]
-        try:
-            upload_template( archtemp, archconf["archive_bin"], use_jinja=True, context=archconf, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True, mode=755)
-            sudo( "chown %s %s" % (self.conf["handyrep"]["postgres_user"], archconf["archive_bin"] ))
-        except:
-            retdict = return_dict(False, "could not push new archive.sh executable")
-        else:
-            retdict = return_dict(True, "pushed new archive.sh executable")
-        finally:
-            disconnect_all()
-            
-        return retdict
+            return return_dict(True, "archiving not configured, so ignoring this")
+
 
     def connection_failover(self, newmaster):
         # fail over connections as part of
@@ -1659,18 +1650,31 @@ class HandyRep(object):
             return return_dict(True, "Post-failover commands executed")
         
 
-    def update_archive_location(self):
-        # pushes a new archive location to all servers
-        # new location must be configured in the config
-        # file first
-        # not currently implemented
-        # start with master
-        # push archive.sh
-        # for each replica
-        # push archive.sh
-        # push recovery.conf
-        # exit
-        return
+    def start_archving(self):
+        # pushes a new archive script to the master
+        # and initializes archiving
+        # but WITHOUT changing postgresql.conf, so
+        # you still need to do that
+        archconf = self.conf["archiving"]
+        if archconf["archiving"] and archconf["archive_script_method"]:
+            arch = self.get_plugin(archconf["archive_script_method"])
+            startit = arch.start()
+            return startit
+        else:
+            return return_dict(False, "Cannot start archiving because it is not configured.")
+
+    def stop_archving(self):
+        # pushes a new archive script to the master
+        # and initializes archiving
+        # but WITHOUT changing postgresql.conf, so
+        # you still need to do that
+        archconf = self.conf["archiving"]
+        if archconf["archiving"] and archconf["archive_script_method"]:
+            arch = self.get_plugin(archconf["archive_script_method"])
+            startit = arch.stop()
+            return startit
+        else:
+            return return_dict(False, "Cannot stop archiving because it is not configured.")
 
     def get_plugin(self, pluginname):
         # call method from the plugins class

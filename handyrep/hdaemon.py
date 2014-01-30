@@ -5,6 +5,8 @@ import json
 
 from flask import Flask, request, jsonify, Response
 
+import daemon.config as config
+
 from daemon.invokable import INVOKABLE
 from daemon.periodic import PERIODIC
 from daemon.startup import startup

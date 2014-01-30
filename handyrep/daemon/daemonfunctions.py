@@ -31,7 +31,7 @@ def is_true(bolval):
     if type(bolval) is bool:
         return bolval
     else:
-        if bolval.lower() in ["true", "t", "on", "1"]:
+        if bolval.lower() in ["true", "t", "on", "1", "yes"]:
             return True
         else:
             return False
@@ -40,7 +40,7 @@ def is_false(bolval):
     if type(bolval) is bool:
         return bolval == False
     else:
-        if bolval.lower() in ["false", "f", "off", "0"]:
+        if bolval.lower() in ["false", "f", "off", "0", "no"]:
             return True
         else:
             return False
@@ -215,6 +215,12 @@ def connection_failover(newmaster=None):
 
 def connection_proxy_init():
     return hr.connection_proxy_init()
+
+def start_archiving():
+    return hr.start_archving()
+
+def stop_archiving():
+    return hr.stop_archiving()
 
 # periodic
 

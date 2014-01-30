@@ -12,10 +12,10 @@
 
 SOURCE="$1" # %p
 FILE="$2" # %f
-DEST="${{ archive_dir }}/${2}"
+DEST="{{ archive_dir }}/${2}"
 
 # See whether we want all archiving off
-test -f ${{ noarchivefile }} && exit 0
+test -f {{ noarchivefile }} && exit 0
 
 # Copy the file to the spool area on the replica, error out if
 # the transfer fails
