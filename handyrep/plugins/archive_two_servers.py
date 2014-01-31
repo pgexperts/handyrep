@@ -79,7 +79,7 @@ class archive_two_servers(HandyRepPlugin):
         myconf = self.conf["plugins"]["archive_two_servers"]
         touchit = "touch %s" % myconf["stop_archiving_file"]
         disabled = self.run_as_postgres(self.get_master_name(),[touchit,])
-        if succeeded(touchit):
+        if self.succeeded(touchit):
             return self.rd(True, "Created noarchiving touch file")
         else:
             return self.rd(False, "Unable to create noarchiving file")
@@ -88,12 +88,12 @@ class archive_two_servers(HandyRepPlugin):
         # push template first
         myconf = self.conf["plugins"]["archive_two_servers"]
         master = self.get_master_name()
-        if failed(self.run(master)):
+        if self.failed(self.run(master)):
             return self.rd(False, "unable to update archving script")
 
         touchit = "rm %s" % myconf["stop_archiving_file"]
         disabled = self.run_as_postgres(master,[touchit,])
-        if succeeded(touchit):
+        if self.succeeded(touchit):
             return self.rd(True, "Created noarchiving touch file")
         else:
             return self.rd(False, "Unable to create noarchiving file")
@@ -110,8 +110,7 @@ class archive_two_servers(HandyRepPlugin):
     def other_server(self, servername):
         # returns the name of the other server
         for serv, servdeets in self.servers.iteritems():
-            if servdeets["enabled"] and serv <> servername
-                and servdeets["role"] in ["master","replica",]:
+            if servdeets["enabled"] and serv <> servername and servdeets["role"] in ["master","replica",]:
                 return serv
 
         return None
