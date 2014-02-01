@@ -282,7 +282,7 @@ class HandyRepPlugin(object):
 
         for serv, servdeets in self.servers.iteritems():
             if all((tag in servdeets and servdeets[tag] == val) for tag, val in kwargs.iteritems()):
-            servlist.append(serv)
+                servlist.append(serv)
 
         return servlist
 
