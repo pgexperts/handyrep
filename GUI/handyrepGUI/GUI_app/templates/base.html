@@ -1,0 +1,33 @@
+
+<head>
+
+	<title>handyrepGUI<!--{% block title %}{% endblock %}--></title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body >
+
+    <nav id = "main_words_nav">
+        <ul class="container1 row" style="background: navy" >
+	        <li class="col span_1">&nbsp;</li>
+            <li class="col span_3"><img style="width:30px;height: 30px; padding-top: 15%" src="/static/images.jpeg"></li>
+            <li class="col span_16" ><a href="/"><h1>HandyRep- Handy replication scripts for your PostgreSQL servers</h1></a></li>
+            <li class="col span_3">><img style="width:30px;height: 30px; padding-top: 15%" src="/static/logo.png"></li>
+	        <li class="col span_1">&nbsp;</li>
+	    </ul>
+    </nav>
+	<nav id = "global_nav" >
+
+	    <ul class="container row" >
+	        <li class="col span_1">&nbsp;</li>
+            {% for topic in topics %}
+	        <li class="col span_7" ><a href="/{{topic.Category|lower}}"><h1 style="text-align: center">{{topic.Category}}</h1><p>{{topic.description}}</p></a></li>
+            {% endfor %}
+
+	        <li class="col span_1">&nbsp;</li>
+	    </ul>
+        <hr style="color: navy"/>
+	</nav>
+    {% block content %} {% endblock %}
+</body>
+</html>

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 style="color: #474747; text-align: center">{{name}}</h1>
+       <nav id = "global_nav" >
+        {% for section in Sections %}
+            {% if loop.index0 is divisibleby 5 %}
+
+                <ul class="container row" >
+{#	            <li class="col span_1">&nbsp;</li>#}
+                <li class="col span_4a" ><a href="/{{name|lower}}/{{section.function_name}}"><h3 title="{{section.description}}">{{section.function_name}} </h3></a></li>
+            {% elif loop.index is divisibleby 5 %}
+
+                <li class="col span_4a" ><a href="/{{name|lower}}/{{section.function_name}}"><h3 title="{{section.description}}">{{section.function_name}} </h3></a></li>
+{#            	<li class="col span_1">&nbsp;</li>#}
+	            </ul>
+            {% else %}
+                <li class="col span_4a" ><a href="/{{name|lower}}/{{section.function_name}}"><h3 title="{{section.description}}">{{section.function_name}} </h3></a></li>
+            {% endif %}
+        {% endfor %}
+       </nav>
+<hr style="color: navy"/>
+{% block detail %}{% endblock %}
+{% endblock %}
+
+
+
+{#	    <ul class="container row" >#}
+{#	        <li class="col span_1">&nbsp;</li>#}
+{#            {% for topic in topics %}#}
+{#	        <li class="col span_7" ><a href="/{{topic.Category|lower}}"><h1 style="text-align: center">{{topic.Category}}</h1><p>{{topic.description}}</p></a></li>#}
+{#            {% endfor %}#}
+{##}
+{#	        <li class="col span_1">&nbsp;</li>#}
+{#	    </ul>#}
+
