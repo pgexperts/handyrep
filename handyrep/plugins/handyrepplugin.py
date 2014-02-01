@@ -281,10 +281,8 @@ class HandyRepPlugin(object):
             del kwargs["enabled"]
 
         for serv, servdeets in self.servers.iteritems():
-            for tag, val in kwargs.iteritems():
-                if tag in servdeets:
-                    if servdeets[tag] == val:
-                        servlist.append(serv)
+            if all((tag in servdeets and servdeets[tag] == val) for tag, val in kwargs.iteritems()):
+            servlist.append(serv)
 
         return servlist
 

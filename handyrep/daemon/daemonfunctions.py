@@ -223,7 +223,7 @@ def connection_proxy_init():
     return hr.connection_proxy_init()
 
 def start_archiving():
-    return hr.start_archving()
+    return hr.start_archiving()
 
 def stop_archiving():
     return hr.stop_archiving()
