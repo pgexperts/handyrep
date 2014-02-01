@@ -20,7 +20,7 @@ class archive_two_servers(HandyRepPlugin):
         # pushes archive script
         # which is set up for two-server archiving
         archiveinfo = self.conf["archive"]
-        myconf = self.conf["plugins"]["archive_two_servers"]
+        myconf = self.get_myconf()
         otherserv = self.other_server(servername)
         if not otherserv:
             return self.rd(False, "no other server configured for archving")
@@ -34,7 +34,7 @@ class archive_two_servers(HandyRepPlugin):
 
     def recoveryline(self):
         # returns archive recovery line for recovery.conf
-        myconf = self.conf["plugins"]["archive_two_servers"]
+        myconf = self.get_myconf()
         restcmd = "restore_command = cp %s" % myconf["archive_directory"]
         restcmd += "/%f %p\n\n"
         restcmd += "archive_cleanup_command = '%s %s" % (myconf["archive_directory"], myconf["archivecleanup_path"],) + "%r'\n"
@@ -47,7 +47,7 @@ class archive_two_servers(HandyRepPlugin):
         # and then disables archiving depending
         # on settings via the stop archiving file
         repservs = self.get_servers(role="replica")
-        myconf = self.conf["plugins"]["archive_two_servers"]
+        myconf = self.get_myconf()
         if not repservs:
             return self.rd("False","no currently configured replica")
         else:
@@ -76,7 +76,7 @@ class archive_two_servers(HandyRepPlugin):
     def stop(self):
         # halts archiving on the master
         # by pushing a noarchving file
-        myconf = self.conf["plugins"]["archive_two_servers"]
+        myconf = self.get_myconf()
         touchit = "touch %s" % myconf["stop_archiving_file"]
         disabled = self.run_as_postgres(self.get_master_name(),[touchit,])
         if self.succeeded(disabled):
@@ -86,7 +86,7 @@ class archive_two_servers(HandyRepPlugin):
 
     def start(self):
         # push template first
-        myconf = self.conf["plugins"]["archive_two_servers"]
+        myconf = self.get_myconf()
         master = self.get_master_name()
         if self.failed(self.run(master)):
             return self.rd(False, "unable to update archving script")

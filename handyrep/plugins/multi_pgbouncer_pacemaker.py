@@ -55,15 +55,6 @@ class multi_pgbouncer_pacemaker(HandyRepPlugin):
             if self.failed(bpush):
                 self.set_bouncer_status(bserv, "unavailable", 4, "unable to reconfigure pgbouncer server for failover")
                 faillist.append(bserv)
-            else:
-                try:
-                    pgbcn = self.connection(bserv)
-                except:
-                    self.set_bouncer_status(bserv, "unavailable", 4, "pgbouncer configured, but does not accept connections")
-                    faillist.append(bserv)
-                else:
-                    pgbcn.close()
-                    self.set_bouncer_status(bserv, "healthy", 1, "pgbouncer initialized")
 
         if faillist:
             # report failure if we couldn't reconfigure any of the servers
@@ -106,18 +97,18 @@ class multi_pgbouncer_pacemaker(HandyRepPlugin):
 
         return blist
 
-    def restart_if_running(self, bouncername):
+    def restart_if_running(self, bouncerserver):
         # restarts a bouncer only if it was already running
         # also updates status
         myconf = self.get_myconf()
         try:
-            pgbcn = self.connection(bouncername)
+            pgbcn = self.connection(bouncerserver)
         except:
-            self.set_bouncer_status(bouncername, "down", 5, "this pgbouncer server is down")
+            self.set_bouncer_status(bouncerserver, "down", 5, "this pgbouncer server is down")
             return self.rd(True, "Bouncer not running so not restarted")
 
         pgbcn.close()
-        self.set_bouncer_status(bouncername, "healthy", 1, "pgbouncer responding")
+        self.set_bouncer_status(bouncerserver, "healthy", 1, "pgbouncer responding")
 
         restart_command = "%s -u %s -d -R %s" % (myconf["pgbouncerbin"],myconf["owner"],myconf["config_location"],)
         rsbouncer = self.run_as_root(bouncerserver,[restart_command,])

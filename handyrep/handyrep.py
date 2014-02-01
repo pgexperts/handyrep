@@ -763,13 +763,9 @@ class HandyRep(object):
         if self.conf["archive"]["archiving"]:
             # invoke the poll method of the archive script, just
             # in case anything is required
-            if self.conf["archive"]["archive_script_method"]:
-                arch = self.get_plugin(self.conf["archive"]["archive_script_method"])
-                arch.poll()
+            self.poll_archiving()
             # do archive deletion cleanup, if required
-            if self.conf["archive"]["archive_delete_method"]:
-                adel = self.get_plugin(self.conf["archive"]["archive_delete_method"])
-                adel.run()
+            self.cleanup_archive()
 
         self.write_servers()
         return vertest
@@ -1664,10 +1660,8 @@ class HandyRep(object):
             return return_dict(False, "Cannot start archiving because it is not configured.")
 
     def stop_archiving(self):
-        # pushes a new archive script to the master
-        # and initializes archiving
-        # but WITHOUT changing postgresql.conf, so
-        # you still need to do that
+        # pushes a NOARCHIVING touch file to the master
+        # does not actually verify that archiving has stopped though
         archconf = self.conf["archive"]
         if archconf["archiving"] and archconf["archive_script_method"]:
             arch = self.get_plugin(archconf["archive_script_method"])
@@ -1675,6 +1669,21 @@ class HandyRep(object):
             return startit
         else:
             return return_dict(False, "Cannot stop archiving because it is not configured.")
+
+    def poll_archiving(self):
+        # polls the archiving servers according to the archive method
+        # in many cases this returns nothing
+        archconf = self.conf["archive"]
+        if archconf["archiving"] and archconf["archive_script_method"]:
+            arch = self.get_plugin(archconf["archive_script_method"])
+            archpoll = arch.poll()
+            return archpoll
+
+    def cleanup_archive(self):
+        # runs the archive delete method, if any
+        if self.conf["archive"]["archiving"] and self.conf["archive"]["archive_delete_method"]:
+                adel = self.get_plugin(self.conf["archive"]["archive_delete_method"])
+                adel.run()
 
     def get_plugin(self, pluginname):
         # call method from the plugins class

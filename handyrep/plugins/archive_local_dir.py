@@ -11,7 +11,7 @@ class archive_local_dir(HandyRepPlugin):
         # pushes archive script
         # which is set up for two-server archiving
         archiveinfo = self.conf["archive"]
-        myconf = self.conf["plugins"]["archive_local_dir"]
+        myconf = self.get_myconf()
         
         archdict = { "archive_directory" : myconf["archive_directory"],
             "no_archive_file" : "stop_archiving_file"}
@@ -21,7 +21,7 @@ class archive_local_dir(HandyRepPlugin):
 
     def recoveryline(self):
         # returns archive recovery line for recovery.conf
-        myconf = self.conf["plugins"]["archive_local_dir"]
+        myconf = self.get_myconf()
         restcmd = "restore_command = cp %s" % myconf["archive_directory"]
         restcmd += "/%f %p\n\n"
         
@@ -37,7 +37,7 @@ class archive_local_dir(HandyRepPlugin):
     def stop(self):
         # halts archiving on the master
         # by pushing a noarchving file
-        myconf = self.conf["plugins"]["archive_local_dir"]
+        myconf = self.get_myconf()
         touchit = "touch %s" % myconf["stop_archiving_file"]
         disabled = self.run_as_postgres(self.get_master_name(),[touchit,])
         if succeeded(touchit):
@@ -48,16 +48,16 @@ class archive_local_dir(HandyRepPlugin):
     def start(self):
         # push template first
         master = self.get_master_name()
-        myconf = self.conf["plugins"]["archive_local_dir"]
+        myconf = self.get_myconf()
         if failed(self.run(master)):
             return self.rd(False, "unable to update archving script")
 
-        touchit = "rm %s" % myconf["stop_archiving_file"]
+        touchit = "rm -f %s" % myconf["stop_archiving_file"]
         disabled = self.run_as_postgres(master,[touchit,])
         if succeeded(touchit):
-            return self.rd(True, "Created noarchiving touch file")
+            return self.rd(True, "Removed noarchiving touch file")
         else:
-            return self.rd(False, "Unable to create noarchiving file")
+            return self.rd(False, "Unable to remove noarchiving file")
 
     def test(self, conf, servers, servername):
         if self.failed(self.test_plugin_conf("archive_directory","archivecleanup_path","stop_archving_file","archive_script_template","archive_script_path")):
