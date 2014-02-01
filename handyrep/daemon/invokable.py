@@ -93,6 +93,9 @@ def start_archiving():
 def stop_archiving():
     return hrdf.stop_archiving()
 
+def cleanup_archive():
+    return hrdf.cleanup_archive()
+
 INVOKABLE = {
     "read_log" : read_log,
     "get_setting" : get_setting,
@@ -125,6 +128,7 @@ INVOKABLE = {
     "connection_failover" : connection_failover,
     "connection_proxy_init" : connection_proxy_init,
     "start_archiving" : start_archiving,
-    "stop_archiving" : stop_archiving
+    "stop_archiving" : stop_archiving,
+    "cleanup_archive" : cleanup_archive
 }
 

@@ -1514,25 +1514,6 @@ class HandyRep(object):
         # exit with success
         return return_dict(True, "Server definition changed", {"definition" : self.servers[servername]})
 
-    def clean_archive(self, expire_hours=None):
-        # are we archiving?
-        archiveinfo = self.conf["archive"]
-        if expire_hours:
-            exphours = expire_hours
-        else:
-            exphours = self.conf["archive"]["archive_delete_hours"]
-        # are we archving?
-        if not archiveinfo["archiving"]:
-            return return_dict(True, "archiving disabled")
-        # are we deleting?
-        if not exphours:
-            return return_dict(True, "archive cleanup disabled")
-        
-        # delete files from archive which are older
-        # than setting using the plugin method
-        archrun = self.get_plugin(archiveinfo["archive_delete_method"])
-        return archrun.run(expire_hours)
-
     def push_replica_conf(self, replicaserver, newmaster=None):
         # write new recovery.conf per servers.save
         servconf = self.servers[replicaserver]
@@ -1678,12 +1659,17 @@ class HandyRep(object):
             arch = self.get_plugin(archconf["archive_script_method"])
             archpoll = arch.poll()
             return archpoll
+        else:
+            return return_dict(True, "archiving is disabled")
 
     def cleanup_archive(self):
         # runs the archive delete method, if any
         if self.conf["archive"]["archiving"] and self.conf["archive"]["archive_delete_method"]:
                 adel = self.get_plugin(self.conf["archive"]["archive_delete_method"])
-                adel.run()
+                adeldone = adel.run()
+                return adeldone
+        else:
+            return return_dict(True, "archive cleanup is disabled")
 
     def get_plugin(self, pluginname):
         # call method from the plugins class

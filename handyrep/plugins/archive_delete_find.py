@@ -12,15 +12,34 @@ class archive_delete_find(HandyRepPlugin):
 
     def run(self):
         archiveinfo = self.conf["archive"]
-        delmin = (as_int(self.conf["plugins"]["archive_delete_find"]["archive_delete_hours"]) * 60)
-        archiveserver = self.servers[archiveinfo["archive_server"]]
-        find_delete = """find %s -regextype 'posix-extended' -maxdepth 1  -mmin +%d -regex '.*[0-9A-F]{24}' -delete""" % (archiveinfo["archive_directory"],delmin,)
-        adelete = self.sudorun(archiveserver,find_delete,archiveinfo["archive_owner"])
+        myconf = self.get_myconf()
+        delmin = (as_int(myconf["archive_delete_hours"]) * 60)
+        archiveserver = self.get_archiveserver()
+        if not archiveserver:
+            return self.rd(False, "no archive server is defined")
+        
+        find_delete = """find %s -regextype 'posix-extended' -maxdepth 1  -mmin +%d -regex '.*[0-9A-F]{24}' -delete""" % (myconf["archive_directory"],delmin,)
+        adelete = self.run_as_root(archiveserver,[find_delete,])
         if self.succeeded(adelete):
             return adelete
         else:
-            return adelete.update( {"details" : "archive cleaning failed due to error: %s" % adelete["details"]})
+            adelete.update( {"details" : "archive cleaning failed due to error: %s" % adelete["details"]})
+            return adelete
 
-    def test(self, conf, servers, servername):
-        # not defined yet
-        return { "result" : "SUCCESS" }
+    def test(self):
+        archserv = self.get_archiveserver()
+        if not archserv:
+            return self.rd(False, "no archive server is defined")
+
+        if self.failed(self.test_plugin_conf("archive_delete_find", "archive_directory", "archive_delete_hours")):
+            return self.rd(False, "archive_delete_find is not configured correctly")
+        else:
+            return self.rd(True, "archive_delete_find is configured")
+
+    def get_archiveserver(self):
+        # assumes that there's only one enabled archive server
+        archservs = self.get_servers(role="archive")
+        if archservs:
+            return archservs[0]
+        else:
+            return None

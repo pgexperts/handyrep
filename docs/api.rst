@@ -809,8 +809,8 @@ definition
     the resulting new definition for the server
     
 
-clean_archive
--------------
+cleanup_archive
+---------------
 
 Delete old WALs from a shared WAL archive, according to the
 expiration settings in handyrep.conf.  Uses the configured
@@ -818,12 +818,7 @@ archive deletion plugin.
 
 ::
 
-    clean_archive
-        expire_hours Integer default None
-
-expire_hours
-    Delete WAL archives older than this number of hours.  If not
-    set, use the setting in handyrep.conf.
+    cleanup_archive
 
 Returns RD:
 

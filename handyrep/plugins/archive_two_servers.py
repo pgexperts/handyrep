@@ -98,9 +98,9 @@ class archive_two_servers(HandyRepPlugin):
         else:
             return self.rd(False, "Unable to remove noarchiving file")
 
-    def test(self, conf, servers, servername):
-        if self.failed(self.test_plugin_conf("archive_two_servers","archive_directory","archivecleanup_path","stop_archving_file","archive_script_template","archive_script_path")):
-            return self.rd(False, "archive_two_servers is not configure")
+    def test(self):
+        if self.failed(self.test_plugin_conf("archive_two_servers","archive_directory","archivecleanup_path","stop_archiving_file","archive_script_template","archive_script_path")):
+            return self.rd(False, "archive_two_servers is not configured")
         else:
             if self.failed(self.run_as_postgres(self.get_master_name(), [self.conf["handyrep"]["test_ssh_command"],])):
                 return self.rd(False, "cannot ssh as postgres to master")

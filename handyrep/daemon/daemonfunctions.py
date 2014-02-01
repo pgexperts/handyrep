@@ -228,6 +228,9 @@ def start_archiving():
 def stop_archiving():
     return hr.stop_archiving()
 
+def cleanup_archive():
+    return hr.cleanup_archive()
+
 # periodic
 
 def failover_check(pollno=None):

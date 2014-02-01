@@ -59,8 +59,8 @@ class archive_local_dir(HandyRepPlugin):
         else:
             return self.rd(False, "Unable to remove noarchiving file")
 
-    def test(self, conf, servers, servername):
-        if self.failed(self.test_plugin_conf("archive_directory","archivecleanup_path","stop_archving_file","archive_script_template","archive_script_path")):
+    def test(self):
+        if self.failed(self.test_plugin_conf("archive_local_dir","archive_directory","archivecleanup_path","stop_archving_file","archive_script_template","archive_script_path")):
             return self.rd(False, "archive_local_dir is not configured")
         else:
             return self.rd(True, "archive_local_dir is configured")
