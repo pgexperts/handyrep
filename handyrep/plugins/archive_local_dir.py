@@ -37,6 +37,7 @@ class archive_local_dir(HandyRepPlugin):
     def stop(self):
         # halts archiving on the master
         # by pushing a noarchving file
+        myconf = self.conf["plugins"]["archive_local_dir"]
         touchit = "touch %s" % myconf["stop_archiving_file"]
         disabled = self.run_as_postgres(self.get_master_name(),[touchit,])
         if succeeded(touchit):
@@ -47,6 +48,7 @@ class archive_local_dir(HandyRepPlugin):
     def start(self):
         # push template first
         master = self.get_master_name()
+        myconf = self.conf["plugins"]["archive_local_dir"]
         if failed(self.run(master)):
             return self.rd(False, "unable to update archving script")
 

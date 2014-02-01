@@ -79,7 +79,7 @@ class archive_two_servers(HandyRepPlugin):
         myconf = self.conf["plugins"]["archive_two_servers"]
         touchit = "touch %s" % myconf["stop_archiving_file"]
         disabled = self.run_as_postgres(self.get_master_name(),[touchit,])
-        if self.succeeded(touchit):
+        if self.succeeded(disabled):
             return self.rd(True, "Created noarchiving touch file")
         else:
             return self.rd(False, "Unable to create noarchiving file")
@@ -91,12 +91,12 @@ class archive_two_servers(HandyRepPlugin):
         if self.failed(self.run(master)):
             return self.rd(False, "unable to update archving script")
 
-        touchit = "rm %s" % myconf["stop_archiving_file"]
-        disabled = self.run_as_postgres(master,[touchit,])
-        if self.succeeded(touchit):
-            return self.rd(True, "Created noarchiving touch file")
+        touchit = "rm -f %s" % myconf["stop_archiving_file"]
+        enabled = self.run_as_postgres(master,[touchit,])
+        if self.succeeded(enabled):
+            return self.rd(True, "Removed noarchiving touch file")
         else:
-            return self.rd(False, "Unable to create noarchiving file")
+            return self.rd(False, "Unable to remove noarchiving file")
 
     def test(self, conf, servers, servername):
         if self.failed(self.test_plugin_conf("archive_two_servers","archive_directory","archivecleanup_path","stop_archving_file","archive_script_template","archive_script_path")):

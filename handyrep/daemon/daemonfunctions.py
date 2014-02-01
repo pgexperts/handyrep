@@ -63,6 +63,9 @@ def get_setting(category="handyrep", setting=None):
 def verify_all():
     return hr.verify_all()
 
+def verify_server(servername):
+    return hr.verify_server(servername)
+
 def reload_conf(config_file='handyrep.conf'):
     return hr.reload_conf(config_file)
 
@@ -78,6 +81,9 @@ def poll(servername=None):
 
 def poll_all():
     return hr.poll_all()
+
+def poll_master():
+    return hr.poll_master()
 
 def get_status(check_type="cached"):
     return hr.get_status(check_type)

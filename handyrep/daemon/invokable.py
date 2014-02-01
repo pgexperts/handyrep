@@ -12,6 +12,9 @@ def get_setting(category="handyrep", setting=None):
 def verify_all():
     return hrdf.verify_all()
 
+def verify_server(servername):
+    return hrdf.verify_server(servername)
+
 def reload_conf(config_file='handyrep.conf'):
     return hrdf.reload_conf(config_file)
 
@@ -23,6 +26,9 @@ def poll(servername=None):
 
 def poll_all():
     return hrdf.poll_all()
+
+def poll_master():
+    return hrdf.poll_master()
 
 def get_status(check_type="cached"):
     return hrdf.get_status(check_type)
@@ -92,10 +98,12 @@ INVOKABLE = {
     "get_setting" : get_setting,
     "set_verbose" : set_verbose,
     "verify_all" : verify_all,
+    "verify_server" : verify_server,
     "reload_conf" : reload_conf,
     "get_master_name" : get_master_name,
     "poll" : poll,
     "poll_all" : poll_all,
+    "poll_master" : poll_master,
     "get_status" : get_status,
     "get_server_info" : get_server_info,
     "get_servers_by_role" : get_servers_by_role,

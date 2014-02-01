@@ -127,7 +127,7 @@ class multi_pgbouncer_pacemaker(HandyRepPlugin):
 
     def test(self):
         #check that we have all config variables required
-        if self.failed( self.test_plugin_conf("multi_pgbouncer","pgbouncerbin","template","owner","config_location","database_list","readonly_suffix","all_replicas")):
+        if self.failed( self.test_plugin_conf("multi_pgbouncer_pacemaker","pgbouncerbin","template","owner","config_location","database_list","readonly_suffix","all_replicas")):
             return self.rd(False, "multi-pgbouncer failover is not configured" )
         #check that we can connect to the pgbouncer servers
         blist = self.bouncer_list()
