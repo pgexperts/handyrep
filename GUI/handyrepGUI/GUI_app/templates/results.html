@@ -1,8 +1,39 @@
 {% extends "Section.html" %}
 
 {% block detail %}
+
 <h1 style="color: #474747; text-align: center">{{ function.function_name }} -- {{ function.description }}</h1>
-    {{ result_to_send }}
+    {% if result_to_send is mapping %}
+        {% for results in result_to_send %}
+
+        {% if result_to_send.get(results) is mapping %}
+            <p>{{ results }}</p>
+        {% if result_to_send.get(results) is mapping %}
+        {%  for result in result_to_send.get(results) %}
+            <p>{{result}}:
+            {% if result_to_send.get(results).get(result) is mapping %}
+                {% for item in result_to_send.get(results).get(result) %}
+
+                    <br>{{ item }}: {{ result_to_send.get(results).get(result).get(item) }}
+                {% endfor %}
+            {% else %}
+                {% if result_to_send.get(results).get(result)  %}
+                    {{ result_to_send.get(results).get(result) }}
+                {% endif %}
+            {% endif %}
+            </p>
+        {% endfor %}
+        {% endif %}
+        {% else %}
+            {% if result_to_send.get(results) %}
+            <p>{{ results }}: {{ result_to_send.get(results) }}</p>
+             {% endif %}
+        {% endif %}
+
+    {% endfor %}
+    {% else %}
+        {{ result_to_send }}
+    {% endif %}
 
 <hr style="color: navy"/>
 {% endblock %}

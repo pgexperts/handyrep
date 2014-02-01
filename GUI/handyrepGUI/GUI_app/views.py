@@ -94,7 +94,12 @@ def function(topic, function):
                         for params in functions['params']:
 
                             if params['param_type'] == 'text' or params['param_type'] == 'choice':
-                                function_parameters[params['param_name']] = getattr(form, 'textdata%d'%tx).data
+                                if params["required"] and getattr(form, 'textdata%d'%tx).data == "":
+                                    message = "Please enter the required field."
+                                    return render_template("function_detail.html", topics=topic_list, Sections = c['Sections'],
+                                           name = c['name'], topic = topic, function = functions, type = topic, form = form, message = message)
+                                if not getattr(form, 'textdata%d'%tx).data == "":
+                                    function_parameters[params['param_name']] = getattr(form, 'textdata%d'%tx).data
                                 tx += 1
 
                             elif params['param_type'] == 'bool':
@@ -126,6 +131,7 @@ def results(topic, function, results):
             print x.text
             return render_template("results.html", topics=topic_list, Sections = c['Sections'], name = c['name'], topic = topic, function = functions, result_to_send = result_to_send)
         result_to_send =  x.json()
+        print result_to_send
         return render_template("results.html", topics=topic_list, Sections = c['Sections'], name = c['name'], topic = topic, function = functions, result_to_send = result_to_send)
 
 
