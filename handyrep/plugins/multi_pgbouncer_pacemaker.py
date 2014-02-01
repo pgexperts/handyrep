@@ -89,7 +89,7 @@ class multi_pgbouncer_pacemaker(HandyRepPlugin):
         # get configuration
         dbsect = { "dbsection" : self.dbconnect_list(master) }
         # push new config
-        myconf = self.conf["plugins"]["multi_pgbouncer"]
+        myconf = self.get_myconf()
         writeconf = self.push_template(bouncerserver,myconf["template"],myconf["config_location"],dbsect,myconf["owner"])
         if self.failed(writeconf):
             return self.rd(False, "could not push new pgbouncer configuration to pgbouncer server")
@@ -109,6 +109,7 @@ class multi_pgbouncer_pacemaker(HandyRepPlugin):
     def restart_if_running(self, bouncername):
         # restarts a bouncer only if it was already running
         # also updates status
+        myconf = self.get_myconf()
         try:
             pgbcn = self.connection(bouncername)
         except:
@@ -136,10 +137,10 @@ class multi_pgbouncer_pacemaker(HandyRepPlugin):
         
         faillist = []
         for bserv in blist:
-            if self.failed(self.run_as_root(bserv,self.conf["handyrep"]["test_ssh_command"])):
+            if self.failed(self.run_as_root(bserv,[self.conf["handyrep"]["test_ssh_command"],])):
                 faillist.append(bserv)
 
-        if failist:
+        if faillist:
             return self.rd(False, "cannot SSH to some pgbouncer servers: %s" % ','.join(faillist))
         
         return self.rd(True, "pgbouncer setup is correct")
@@ -179,7 +180,7 @@ class multi_pgbouncer_pacemaker(HandyRepPlugin):
         # creates the list of database aliases and target
         # servers for pgbouncer
         # build master string first
-        myconf = self.conf["plugins"]["multi_pgbouncer_pacemaker"]
+        myconf = self.get_myconf()
         dblist = myconf["database_list"]
         # add in the handyrep db if the user has forgotten it
         if self.conf["handyrep"]["handyrep_db"] not in dblist:

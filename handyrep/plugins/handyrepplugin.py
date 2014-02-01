@@ -166,6 +166,13 @@ class HandyRepPlugin(object):
         conf = self.get_conf("plugins",self.__class__.__name__,confkey)
         return conf
 
+    def get_myconf(self):
+        confname = self.__class__.__name__
+        if confname in self.conf["plugins"]:
+            return self.conf["plugins"][confname]
+        else:
+            return None
+
     def get_serverinfo(self, *args):
         # a "safe" configuration reader for server configuration
         # gets a single option or returns None if that option isn't set
