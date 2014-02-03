@@ -1,14 +1,14 @@
 
 #main_words_nav a:link, #main_words_nav a:visited, #main_words_nav a:hover, #main_words_nav a:active{
-    color:lightgray; text-decoration: none; font-weight:bold; font-size:1.20em;
+    color:#1b75bc; text-decoration: none; font-weight:bold; font-size:1.20em;
 }
 
 #global_nav a:link, #global_nav a:visited{
-    color:navy; font-weight:bold; font-size:1.25em; text-decoration: none;
+    color:#2b3990; font-weight:bold; font-size:1.25em; text-decoration: none;
 }
 
 #global_nav a:hover, #global_nav a:active{
-    color:#474747; font-weight:bold; font-size:1.25em; text-decoration: none;
+    color:#231f20; font-weight:bold; font-size:1.25em; text-decoration: none;
 }
 
 .container {
@@ -19,8 +19,9 @@
 .container1 {
 
 	margin: 0 auto;
-    background: navy;
-    border-color: navy}
+      background: #2b3990;
+    border-color: #2b3990
+  }
 
 
 /* SELF CLEARING FLOATS - CLEARFIX METHOD */

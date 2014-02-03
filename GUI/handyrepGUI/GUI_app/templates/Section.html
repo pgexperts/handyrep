@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 style="color: #474747; text-align: center">{{name}}</h1>
+<h1 style="color: #231f20; text-align: center">{{name}}</h1>
        <nav id = "global_nav" >
         {% for section in Sections %}
             {% if loop.index0 is divisibleby 5 %}
@@ -18,7 +18,7 @@
             {% endif %}
         {% endfor %}
        </nav>
-<hr style="color: navy"/>
+<hr style="color: #2b3990"/>
 {% block detail %}{% endblock %}
 {% endblock %}
 
