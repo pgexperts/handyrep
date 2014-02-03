@@ -133,10 +133,8 @@ Action = [
         'pairs for settings to change. Settings may be "changed" to the existing value, so it is permissible to pass in '
         'an entire dictionary of the server config with one changed setting.', 'param_type': 'text', 'required': False, 'param_options': None}],
      'result_format': ''},
-    {'function_name': 'clean_archive', 'description': 'Delete old WALs from a shared WAL archive, according to the '
-        'expiration settings in handyrep.conf. Uses the configured archive deletion plugin.', 'params':
-        [{'param_name': 'expire_hours', 'param_description': 'Delete WAL archives older than this number of hours. If '
-        'not set, use the setting in handyrep.conf.', 'param_type': 'text', 'required': False, 'param_options': None}],'result_format': ''},
+    {'function_name': 'cleanup_archive', 'description': 'Delete old WALs from a shared WAL archive, according to the '
+        'expiration settings in handyrep.conf. Uses the configured archive deletion plugin.', 'params':None ,'result_format': ''},
     {'function_name': 'connection_proxy_init', 'description': 'Set up the connection proxy configuration according to the '
         'configured connection failover plugin. Not all connection proxy plugins support initialization.', 'params': None,
      'result_format': ''},
