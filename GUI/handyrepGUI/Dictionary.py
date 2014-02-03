@@ -17,28 +17,29 @@ Information = [
          {'option_name': 'cached', 'description': "Just return information from HandyRep's last check."},
          {'option_name': 'verify', 'description': 'Specify that the server is to fully verify all servers before returning status information.'}]}],
      'result_format': ''},
-    {'function_name': 'get_cluster_status', 'description': 'Returns the cluster status fields for the cluster.', 'params': [{'param_name': 'verify',
+    {'function_name': 'get_cluster_status', 'description': 'Returns the cluster status fields for the cluster.',
+     'short_description': 'Cluster status fields', 'params': [{'param_name': 'verify',
         'param_description': "A true value will verify all cluster data, a false value will just return cached data.", 'param_type': 'bool',
         'required': False,'param_options': None}],
      'result_format': ''},
-    {'function_name': 'get_master_name', 'description': 'Returns the name of the current master.', 'params': None,
-     'result_format': ''},
+    {'function_name': 'get_master_name', 'description': 'Returns the name of the current master.',
+     'short_description': 'Current master\'s name', 'params': None, 'result_format': ''},
     {'function_name': 'get_server_info', 'description': 'Returns server configuration and status details for the named server(s).',
-     'params': [{'param_name': 'servername', 'param_description': 'The server whose data to return. If None, return a dictionary of all servers.',
-                 'param_type': 'text', 'required': False, 'param_options': None},
+     'short_description': 'Configuration & Status detail', 'params': [{'param_name': 'servername', 'param_description': 'The server whose data to return. If None, '
+       'return a dictionary of all servers.', 'param_type': 'text', 'required': False, 'param_options': None},
                 {'param_name': 'verify', 'param_description': 'A true value will verify all server data, a false value will just return cached data.',
                  'param_type': 'bool', 'required': False, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'read_log', 'description': 'Retrieves the last N lines of the handyrep log and presents them as a list in reverse chonological order.',
-     'params': [{'param_name': 'numlines', 'param_description': 'How many lines of the log to retrieve.', 'param_type':'text',
+     'short_description': 'handyrep log lines', 'params': [{'param_name': 'numlines', 'param_description': 'How many lines of the log to retrieve.', 'param_type':'text',
                 'required': False, 'param_options': None}],
      'result_format': ''},
-    {'function_name': 'get_setting', 'description': 'Retrieves a single configuration setting.', 'params': [{'param_name': 'category',
+    {'function_name': 'get_setting', 'description': 'Retrieves a single configuration setting.', 'short_description': 'A configuration setting', 'params': [{'param_name': 'category',
                 'param_description': 'Section of the config the setting is in.', 'param_type':'text', 'required': False,
                 'param_options': None},{'param_name': 'setting', 'param_description': 'The individual setting name.', 'param_type': 'text',
                 'required': True, 'param_options': None}],
      'result_format': ''},
-    {'function_name': 'set_verbose', 'description': 'Toggles verbose logging.','params': [{'param_name': 'verbose',
+    {'function_name': 'set_verbose', 'description': 'Toggles verbose logging.', 'short_description': 'Toggles verbose logging', 'params': [{'param_name': 'verbose',
         'param_description': 'True for verbose.', 'param_type': 'bool', 'required': False, 'param_options': None}],
      'result_format': ''}
 
@@ -48,21 +49,21 @@ Availability = [
     {'function_name': 'poll_master', 'description': 'Uses the configured polling method to check the master for availability. '
                     'Updates the status dictionary in the process. Can only determine up/down, and cannot determine if '
                     'the master has issues; as a result, will not change "warning" to "healthy". Also checks that the master '
-                    'is actually a master and not a replica.', 'params': None,
+                    'is actually a master and not a replica.', 'short_description': 'Check master availability', 'params': None,
      'result_format': ''},
     {'function_name': 'poll', 'description': 'Uses the configured polling method to check the designated server for '
                     'availability. Updates the status dictionary in the process. Can only determine up/down, and cannot '
-                    'determine if the master has issues; as a result, will not change "warning" to "healthy".',
+                    'determine if the master has issues; as a result, will not change "warning" to "healthy".', 'short_description': 'Check server availability',
      'params': [{'param_name': 'servername', 'param_description': 'Server to poll.', 'param_type': 'text', 'required': False,
                  'param_options': None}], 'result_format': ''},
     {'function_name': 'poll_all', 'description': 'Polls all servers using the configured polling method. Also checks the '
                     'number of currently enabled and running masters and replicas. Intended to be part of availablity checks. '
-                    'Updates the status dictionary.', 'params': None,
+                    'Updates the status dictionary.', 'short_description': 'Checks all servers availability', 'params': None,
      'result_format': ''},
     {'function_name': 'verify_server', 'description': "Checks that the replica is running and is in replication, or "
                     "Checks the master server to make sure it's fully operating, including checking that we can connect, "
                     "we can write data, and that ssh and control commands are available. Updates the status dictionary."
-                    "Dependant on which role of the server",
+                    "Dependant on which role of the server", 'short_description': 'Verifies server',
      'params': [{'param_name': 'server', 'param_description': 'Server name.', 'param_type': 'text', 'required': False,
                  'param_options': None}], 'result_format': ''},
     {'function_name': 'verify_all', 'description': 'Does complete check of all enabled servers in the server list. '

@@ -6,15 +6,14 @@
             {% if loop.index0 is divisibleby 3 %}
 
                 <ul class="container row" >
-{#	            <li class="col span_1">&nbsp;</li>#}
-                <li class="col span_7" ><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{section.function_name}}<br><span style="padding-left: 5%; font-size: .60em">   {{ section.short_description }}</span> </h2></a></li>
+                <li class="col span_8" style="text-align: center"><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})</span> </h2></a></li>
             {% elif loop.index is divisibleby 3 %}
 
-                <li class="col span_7" ><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{section.function_name}}<br><span style="padding-left: 5%; font-size: .60em">   {{ section.short_description }}</span>  </h2></a></li>
+                <li class="col span_8" style="text-align: center" ><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})</span>  </h2></a></li>
 {#            	<li class="col span_1">&nbsp;</li>#}
 	            </ul>
             {% else %}
-                <li class="col span_7" ><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{section.function_name}}<br><span style="padding-left: 5%; font-size: .60em">   {{ section.short_description }}</span>  </h2></a></li>
+                <li class="col span_8" style="text-align: center"><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})   </span>  </h2></a></li>
             {% endif %}
         {% endfor %}
        </nav>
