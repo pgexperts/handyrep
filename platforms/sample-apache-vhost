@@ -1,7 +1,7 @@
 #sample virtual host file for running HandyRep under mod_wsgi.
 #derived from Ubuntu install
 
-<VirtualHost *:80>
+<VirtualHost rest.handyrep:80>
         ServerAdmin webmaster@localhost
 
         # HR needs to run with only one process
