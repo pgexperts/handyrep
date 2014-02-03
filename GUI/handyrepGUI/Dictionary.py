@@ -9,7 +9,8 @@ Categories = [
 
 
 Information = [
-    {'function_name': 'get_status', 'description': 'Returns all status information for the cluster.','params': [{'param_name': 'check_type',
+    {'function_name': 'get_status', 'description': 'Returns all status information for the cluster.', 'short_description': 'Cluster status information',
+     'params': [{'param_name': 'check_type',
         'param_description': "allows you to specify that the server is to poll or fully verify all servers before "
                              "returning status information. Defaults to \"cached\".", 'param_type': 'choice', 'required': False,
         'param_options': [{ 'option_name': 'poll', 'description': 'Specify that the server is to poll all servers before returning status information.'},

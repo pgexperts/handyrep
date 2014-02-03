@@ -2,7 +2,7 @@
 
 {% block detail %}
 
-<h1 style="color: #231f20; text-align: center">{{ function.function_name }} -- {{ function.description }}</h1>
+<h1 style="color: #231f20; text-align: center">{{ function.function_name }}<br><span style=" font-size: .60em">{{ function.description }}</span></h1>
     {% if result_to_send is mapping %}
         {% for results in result_to_send %}
 
@@ -35,5 +35,5 @@
         {{ result_to_send }}
     {% endif %}
 
-<hr style="color: #2b3990"/>
+<hr/>
 {% endblock %}
