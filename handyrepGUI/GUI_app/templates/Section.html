@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
+    <hr/>
     <div style="text-align: center">
 <div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block">
-    <h1 style="color: #231f20; text-align: center; padding-left: 3em; padding-right: 3em">&nbsp{{name}}&nbsp</h1>
+    <h1 style="color: #231f20; text-align: center; padding-left: 3em; padding-right: 3em">&nbsp{{topic | capitalize}}&nbsp</h1>
 </div>
     </div>
        <nav id = "global_nav" >
@@ -10,18 +11,18 @@
             {% if loop.index0 is divisibleby 3 %}
 
                 <ul class="container row" >
-                <li class="col span_8" style="text-align: center"><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})</span> </h2></a></li>
+                <li class="col span_8" style="text-align: center"><a href="/{{topic|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})</span> </h2></a></li>
             {% elif loop.index is divisibleby 3 %}
 
-                <li class="col span_8" style="text-align: center" ><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})</span>  </h2></a></li>
+                <li class="col span_8" style="text-align: center" ><a href="/{{topic|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})</span>  </h2></a></li>
 {#            	<li class="col span_1">&nbsp;</li>#}
 	            </ul>
             {% else %}
-                <li class="col span_8" style="text-align: center"><a href="/{{name|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})   </span>  </h2></a></li>
+                <li class="col span_8" style="text-align: center"><a href="/{{topic|lower}}/{{section.function_name}}"><h2 title="{{section.description}}">{{ section.short_description }}<br><span style="padding-left: 5%; font-size: .60em">({{section.function_name}})   </span>  </h2></a></li>
             {% endif %}
         {% endfor %}
        </nav>
-<hr style="color: #2b3990"/>
+
 {% block detail %}{% endblock %}
 {% endblock %}
 

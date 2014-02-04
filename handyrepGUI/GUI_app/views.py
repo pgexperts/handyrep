@@ -22,16 +22,11 @@ def get_section(section_name):
     section = ""
     if section_name == "information":
         section = Dictionary.Information
-        name = "Information"
     elif section_name == "availability":
         section = Dictionary.Availability
-        name = "Availability"
     elif section_name == "action":
         section = Dictionary.Action
-        name = "Action"
-    else:
-        name = "Please select one of the options from above"
-    return {'Sections': section, 'name': name}
+    return section
 
 @app.route('/')
 @app.route('/index/')
@@ -56,6 +51,7 @@ def address():
             message = "There is something wrong with the address, please try again."
             return render_template('get_address.html', form = form, message = message)
         if r.status_code in range(400,500):
+            print r.text
             message = "Please check username and password"
             return render_template('get_address.html', form = form, message = message)
 
@@ -67,26 +63,26 @@ def address():
 
 @app.route('/<topic>/')
 def information(topic):
-    c = get_section(topic)
-    return render_template("Section.html", topics=topic_list, Sections = c['Sections'], name = c['name'])
+    sections = get_section(topic)
+    return render_template("Section.html", topics=topic_list, topic = topic, Sections = sections)
 
 @app.route('/<topic>/<function>/', methods=['GET', 'POST'])
 def function(topic, function):
 
-    c = get_section(topic)
+    sections = get_section(topic)
     global function_parameters
     function_parameters = {}
     if handyrep_address is None or username is None or password is None:
         return redirect(url_for("address", next = request.url))
     else:
-        for functions in c['Sections']:
+        for functions in sections:
             if functions["function_name"] == function:
 
                 if functions["params"] == None:
                     url = '/%s/%s/none/'%(topic, functions["function_name"])
                     return redirect(url)
                 else:
-                    form = FunctionForm(section = c['Sections'], function = function)
+                    form = FunctionForm(section = sections, function = function)
                     if form.validate_on_submit():
                         tf = 1
                         tx = 1
@@ -96,8 +92,8 @@ def function(topic, function):
                             if params['param_type'] == 'text' or params['param_type'] == 'choice':
                                 if params["required"] and getattr(form, 'textdata%d'%tx).data == "":
                                     message = "Please enter the required field."
-                                    return render_template("function_detail.html", topics=topic_list, Sections = c['Sections'],
-                                           name = c['name'], topic = topic, function = functions, type = topic, form = form, message = message)
+                                    return render_template("function_detail.html", topics=topic_list, Sections = sections,
+                                           topic = topic, function = functions, form = form, message = message)
                                 if not getattr(form, 'textdata%d'%tx).data == "":
                                     function_parameters[params['param_name']] = getattr(form, 'textdata%d'%tx).data
                                 tx += 1
@@ -107,16 +103,16 @@ def function(topic, function):
                                 tf += 1
                         url = '/%s/%s/results'%(topic, functions["function_name"])
                         return redirect(url)
-                    return render_template("function_detail.html", topics=topic_list, Sections = c['Sections'],
-                                           name = c['name'], topic = topic, function = functions, type = topic, form = form)
+                    return render_template("function_detail.html", topics=topic_list, Sections = sections,
+                                           topic = topic, function = functions, form = form)
 
 @app.route('/<topic>/<function>/<results>/')
 def results(topic, function, results):
-    c = get_section(topic)
+    sections = get_section(topic)
     if handyrep_address is None or username is None or password is None:
         return redirect(url_for("address", next = request.url))
     else:
-        for functions in c['Sections']:
+        for functions in sections:
             if functions["function_name"] == function:
                 url_to_send = "{address}/{function_name}".format(address=handyrep_address,  function_name = functions["function_name"])
                 print url_to_send
@@ -129,9 +125,9 @@ def results(topic, function, results):
         if not x.status_code == requests.codes.OK:
             result_to_send = "Parameters were not entered correctly. Please renter them. Remember, handyrep is case sensitive."
             print x.text
-            return render_template("results.html", topics=topic_list, Sections = c['Sections'], name = c['name'], topic = topic, function = functions, result_to_send = result_to_send)
+            return render_template("results.html", topics=topic_list, Sections = sections, topic = topic, function = functions, result_to_send = result_to_send)
         result_to_send =  x.json()
         print result_to_send
-        return render_template("results.html", topics=topic_list, Sections = c['Sections'], name = c['name'], topic = topic, function = functions, result_to_send = result_to_send)
+        return render_template("results.html", topics=topic_list, Sections = sections, topic = topic, function = functions, result_to_send = result_to_send)
 
 

@@ -6,31 +6,48 @@
 </head>
 
 <body >
-    <div style="background-color: #f9fbfb;  margin: 0% auto ">
-    <nav id = "main_words_nav">
+<div id="container">
+<div id="header">
+    <div style="background-color: #f9fbfb;  margin: 0% auto">
+
         <ul class=" row">
 	        <li class="col span_1">&nbsp;</li>
             <li class="col span_15"><a href="/"> <img style="height:120px; float: left" src="/static/handyrepfinalwithtext.gif"></a></li>
-            <li class="col span_5"><img style="height: 100px; padding-top: .65em; float: right" src="/static/logo.png"></li>
+            <li class="col span_5"><a href="http://www.pgexperts.com"><img style="height: 100px; padding-top: .65em; float: right" src="/static/logo.png"></a></li>
 	        <li class="col span_1">&nbsp;</li>
 	    </ul>
-    </nav>
-    </div>
-{#    <hr/>#}
 
-	<nav id = "global_nav" style="" >
+    </div>
+</div>
+{#    <hr/>#}
+<div id="body">
+	<nav id = "global_nav">
 
 	    <ul class="container row" >
 	        <li class="col span_1">&nbsp;</li>
             {% for topic in topics %}
-	        <li class="col span_7" ><a style="text-align: center" href="/{{topic.Category|lower}}"><h1 >{{topic.Category}}</h1><p>{{topic.description}}</p></a></li>
+	        <li class="col span_7" ><a style="text-align: center" href="/{{topic.Category|lower}}"><h1 >{{topic.Category}}</h1><p style="font-size: .85em">{{topic.description}}</p></a></li>
             {% endfor %}
 
 	        <li class="col span_1">&nbsp;</li>
 	    </ul>
-        <hr/>
+
 	</nav>
 
     {% block content %} {% endblock %}
+</div>
+<div id="footer">
+    <div style="; padding-top: 3em; padding-bottom: 1em; ">
+    <div style="background-color: #f9fbfb;  margin: 0% auto">
+
+        <ul class=" row">
+	        <li class="col span_1">&nbsp;</li>
+            <li class="col span_15"><a href="/"> <img style="height: 40px; float: left" src="/static/handyrepfinalwithtext.gif"></a></li>
+            <li class="col span_5"><a href="http://www.pgexperts.com"><img style="height: 30px; padding-top: .65em; float: right" src="/static/logo.png"></a></li>
+	        <li class="col span_1">&nbsp;</li>
+	    </ul>
+
+    </div></div>
+</div></div>
 </body>
 </html>

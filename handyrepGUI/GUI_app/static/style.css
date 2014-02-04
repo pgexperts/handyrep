@@ -89,4 +89,31 @@ hr{
 	.span_23 { width: 95.75%; }
 	.span_24 { width: 100%; }
 }
+html,
+body {
+   margin:0;
+   padding:0;
+   height:100%;
+   font-family: Bookman Old School, "Trebuchet MS", Arial, sans-serif;
+   font-size: 14px;
+   line-height:150%;
+}
+#container {
+   min-height:100%;
+   position:relative;
+}
+#header {
+   padding:10px;
+}
+#body {
+   padding:10px;
+   padding-bottom:40px;   /* Height of the footer */
+}
+#footer {
+   position:absolute;
+   bottom:0;
+   width:100%;
+   height:90px;   /* Height of the footer */
 
+
+}
