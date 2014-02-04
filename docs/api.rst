@@ -779,9 +779,9 @@ definition
 add_server
 ----------
 
-Change details of a server after initialization.  Required
-because the .conf file is not considered the canonical
-information about servers once servers.save has been created.
+Add a new server to a running handyrep.  Needed because handyrep.conf
+is not considered the canonical source of server information once
+handyrep has been started.
 
 ::
 
