@@ -13,7 +13,7 @@
 
 .container {
 
-	max-width: 95%;
+	max-width: 100%;
 	margin: 0 auto; }
 
 .container1 {
@@ -36,7 +36,7 @@
 /* DEFAULT ROW STYLES */
 /*.row { margin-bottom: 1.5em; } *//* set according to preference*/
 hr{
-    color: #2b3990;
+    color: #1b75bb;
     width: 100%;
 
 }
@@ -44,7 +44,7 @@ hr{
 /* DEFAULT COLUMN STYLES */
 .col {
 	display: block;
-	float:left;
+	float: left;
 	width: 100%;
     border: 1px;
     border-color: white;

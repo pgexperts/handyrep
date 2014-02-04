@@ -58,53 +58,53 @@ Availability = [
                  'param_options': None}], 'result_format': ''},
     {'function_name': 'poll_all', 'description': 'Polls all servers using the configured polling method. Also checks the '
                     'number of currently enabled and running masters and replicas. Intended to be part of availablity checks. '
-                    'Updates the status dictionary.', 'short_description': 'Checks all servers availability', 'params': None,
+                    'Updates the status dictionary.', 'short_description': 'Check all servers availability', 'params': None,
      'result_format': ''},
     {'function_name': 'verify_server', 'description': "Checks that the replica is running and is in replication, or "
                     "Checks the master server to make sure it's fully operating, including checking that we can connect, "
                     "we can write data, and that ssh and control commands are available. Updates the status dictionary."
-                    "Dependant on which role of the server", 'short_description': 'Verifies server',
+                    "Dependant on which role of the server", 'short_description': 'Verify a server',
      'params': [{'param_name': 'server', 'param_description': 'Server name.', 'param_type': 'text', 'required': False,
                  'param_options': None}], 'result_format': ''},
     {'function_name': 'verify_all', 'description': 'Does complete check of all enabled servers in the server list. '
                     'Updates the status dictionary. Returns detailed check information about each server.',
-     'params': None,
+     'short_description': 'Check all servers', 'params': None,
      'result_format': ''}
 ]
 
 Action = [
     {'function_name': 'init_handyrep_db', 'description': 'Creates the initial handyrep schema and table.',
-     'params': None,
+     'short_description': 'Create schema and table', 'params': None,
      'result_format': ''},
     {'function_name': 'reload_conf', 'description': 'Reload handyrep configuration from the handyrep.conf file. '
-                'Allows changing of configuration files.', 'params': [{'param_name': 'config_file', 'param_description':
+                'Allows changing of configuration files.', 'short_description': 'Reload configuration', 'params': [{'param_name': 'config_file', 'param_description':
         'File path location of the configuration file. Defaults to "handyrep.conf" in the working directory.', 'param_type': 'text',
         'required': False, 'param_options': None}],'result_format': ''},
     {'function_name': 'shutdown', 'description': 'Shut down the designated server. Checks to make sure that the server '
-        'is actually down.', 'params': [{'param_name': 'servername', 'param_description': 'The name of the server to shut down', 'param_type': 'text',
+        'is actually down.', 'short_description': 'Shutdown server', 'params': [{'param_name': 'servername', 'param_description': 'The name of the server to shut down', 'param_type': 'text',
         'required': True, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'startup', 'description': 'Starts the designated server. Checks to make sure that the server is actually up.',
-     'params': [{'param_name': 'servername', 'param_description': 'The name of the server to start.', 'param_type': 'text',
+     'short_description': 'Startup server', 'params': [{'param_name': 'servername', 'param_description': 'The name of the server to start.', 'param_type': 'text',
         'required': True, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'restart', 'description': 'restarts the designated server. Checks to make sure that the server is actually up.',
-     'params': [{'param_name': 'servername', 'param_description': 'The name of the server to start.', 'param_type': 'text',
+     'short_description': 'Restart server', 'params': [{'param_name': 'servername', 'param_description': 'The name of the server to start.', 'param_type': 'text',
         'required': True, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'promote', 'description': 'Promotes the designated replica to become a master or standalone. Does '
-        'NOT do other failover procedures. Does not prevent creating two masters.', 'params': [{'param_name': 'severname',
+        'NOT do other failover procedures. Does not prevent creating two masters.', 'short_description': 'Promote replica', 'params': [{'param_name': 'severname',
         'param_description': 'The name of the server to start.', 'param_type': 'text','required': True, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'manual_failover', 'description': 'Fail over to a new master, presumably for planned downtimes, '
-        'maintenance, or server migrations.', 'params': [{'param_name': 'newmaster', 'param_description': 'Server to fail '
+        'maintenance, or server migrations.', 'short_description': 'Fail over to new master', 'params': [{'param_name': 'newmaster', 'param_description': 'Server to fail '
         'over to. If not supplied, use the same master selection process as auto-failover.', 'param_type': 'text',
         'param_options': None}, {'param_name': 'remaster', 'param_description': 'Whether or not to remaster '
         'all other servers to replicate from the new master. If not supplied, setting in handyrep.conf is used.', 'param_type': 'bool',
         'required': False, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'clone', 'description': 'Create a clone from the master, and starts it up. Uses the configured '
-        'cloning method and plugin.', 'params': [{'param_name': 'replicaserver', 'param_description': 'The new replica '
+        'cloning method and plugin.', 'short_description': 'Clone master and Start it', 'params': [{'param_name': 'replicaserver', 'param_description': 'The new replica '
         'to clone to.', 'param_type': 'text', 'required': False, 'param_options': None},
         {'param_name': 'reclone', 'param_description': 'Whether to clone over an existing replica, if any. '
                 'If set to False (the default), clone will abort if this server has an operational PostgreSQL on it.', 'param_type': 'bool',
@@ -113,31 +113,32 @@ Action = [
         'required': False, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'enable', 'description': 'Enable a server definition already created. Also verifies the server defintion.',
-     'params': [{'param_name': 'servername', 'param_description': 'The server to enable.', 'param_type': 'text', 'required': False,
+     'short_description': 'Enable server definition', 'params': [{'param_name': 'servername', 'param_description': 'The server to enable.', 'param_type': 'text', 'required': False,
                  'param_options': None},], 'result_format': ''},
     {'function_name': 'disable', 'description': 'Mark an existing server disabled so that it is no longer checked. '
-        'Also attempts to shut down the indicated server.', 'params': [{'param_name': 'servername',
+        'Also attempts to shut down the indicated server.', 'short_description': 'Disable server for checking', 'params': [{'param_name': 'servername',
         'param_description': 'The server to disable.', 'param_type': 'text', 'required': False, 'param_options': None}], 'result_format': ''},
-    {'function_name': 'remove', 'description': 'Delete the definition of a disabled server.', 'params':
+    {'function_name': 'remove', 'description': 'Delete the definition of a disabled server.', 'short_description': 'Delete server definition', 'params':
         [{'param_name': 'servername', 'param_description': 'The server to disable.', 'param_type': 'text', 'required': False, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'alter_server_def', 'description': 'Change details of a server after initialization. Required '
         'because the .conf file is not considered the canonical information about servers once servers.save has been created.',
-     'params': [{'param_name': 'servername', 'param_description': 'The existing server whose details are to be changed.',
+     'short_description': 'Change server details', 'params': [{'param_name': 'servername', 'param_description': 'The existing server whose details are to be changed.',
         'param_type': 'text', 'required': False,  'param_options': None}, {'param_name': 'serverprops', 'param_description': 'a set of '
         'key-value pairs for settings to change. Settings may be "changed" to the existing value, so it is permissible '
         'to pass in an entire dictionary of the server config with one changed setting.', 'param_type': 'text',
         'required': False, 'param_options': None}], 'result_format': ''},
     {'function_name': 'add_server', 'description': 'Change details of a server after initialization. Required because '
         'the .conf file is not considered the canonical information about servers once servers.save has been created.',
-        'params': [{'param_name': 'servername', 'param_description': 'The existing server whose details are to be changed.',
+        'short_description': 'Add a server', 'params': [{'param_name': 'servername', 'param_description': 'The existing server whose details are to be changed.',
         'param_type': 'text', 'required': False, 'param_options': None}, {'param_name': 'serverprops', 'param_description': 'a set of key-value '
         'pairs for settings to change. Settings may be "changed" to the existing value, so it is permissible to pass in '
         'an entire dictionary of the server config with one changed setting.', 'param_type': 'text', 'required': False, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'cleanup_archive', 'description': 'Delete old WALs from a shared WAL archive, according to the '
-        'expiration settings in handyrep.conf. Uses the configured archive deletion plugin.', 'params':None ,'result_format': ''},
+        'expiration settings in handyrep.conf. Uses the configured archive deletion plugin.',
+     'short_description': 'Delete old WALs', 'params': None,'result_format': ''},
     {'function_name': 'connection_proxy_init', 'description': 'Set up the connection proxy configuration according to the '
-        'configured connection failover plugin. Not all connection proxy plugins support initialization.', 'params': None,
+        'configured connection failover plugin. Not all connection proxy plugins support initialization.', 'short_description': 'Connection proxy config','params': None,
      'result_format': ''},
 ]

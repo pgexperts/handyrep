@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 style="color: #231f20; text-align: center">{{name}}</h1>
+    <div style="text-align: center">
+<div style="background-color: #fbf7f7; margin: 0% auto; display: inline-block">
+    <h1 style="color: #231f20; text-align: center; padding-left: 3em; padding-right: 3em">&nbsp{{name}}&nbsp</h1>
+</div>
+    </div>
        <nav id = "global_nav" >
         {% for section in Sections %}
             {% if loop.index0 is divisibleby 3 %}
