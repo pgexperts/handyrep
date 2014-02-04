@@ -1,9 +1,17 @@
 {% extends "base.html" %}
         {% block content %}
-            <h2 style="color: #231f20">Please enter the address where HandyRep is running. <span style="font-style: italic">Please remember to include http://</span></h2>
+            <div style="text-align: center">
+                <div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block">
+                    <h1 style="color: #231f20; text-align: center; padding-left: 3em; padding-right: 3em">&nbsp HandyRep Information &nbsp</h1>
+                </div>
+            </div>
+            <br/>
             {% if message %}
-            <h2 style="color: red">{{ message }}</h2>
+                <h2 style="color: red; text-align: center">{{ message }}</h2>
             {% endif %}
+            <div style="padding-left: 7em">
+
+            <h2 style="color: #231f20;">Please enter the address where HandyRep is running. <br/><span style="font-style: italic; padding-left: 1.5em">Please remember to include http://</span></h2>
             <form action="" method="post" name="address">
                 {{form.hidden_tag()}}
                 <p >{{form.address(size=80)}}</p>
@@ -14,4 +22,5 @@
                 <p><input type="submit" value="Submit"></p>
 
             </form>
+        </div>
         {% endblock %}

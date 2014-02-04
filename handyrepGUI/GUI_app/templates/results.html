@@ -1,8 +1,10 @@
 {% extends "Section.html" %}
 
 {% block detail %}
-
-<h1 style="color: #231f20; text-align: center">{{ function.function_name }}<br><span style=" font-size: .60em">{{ function.description }}</span></h1>
+    <div style="text-align: center">
+<div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block">
+<h1 style="color: #231f20; text-align: center; padding-right: 1.5em; padding-left: 1.5em">{{ function.function_name }}<br><span style=" font-size: .60em">{{ function.description }}</span></h1>
+</div></div>
     {% if result_to_send is mapping %}
         {% for results in result_to_send %}
 
@@ -35,5 +37,4 @@
         {{ result_to_send }}
     {% endif %}
 
-<hr/>
 {% endblock %}
