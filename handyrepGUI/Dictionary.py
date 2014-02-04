@@ -128,8 +128,7 @@ Action = [
         'key-value pairs for settings to change. Settings may be "changed" to the existing value, so it is permissible '
         'to pass in an entire dictionary of the server config with one changed setting.', 'param_type': 'text',
         'required': False, 'param_options': None}], 'result_format': ''},
-    {'function_name': 'add_server', 'description': 'Change details of a server after initialization. Required because '
-        'the .conf file is not considered the canonical information about servers once servers.save has been created.',
+    {'function_name': 'add_server', 'description': 'Add a new server to a running handyrep. Needed because handyrep.conf is not considered the canonical source of server information once handyrep has been started.',
         'short_description': 'Add a server', 'params': [{'param_name': 'servername', 'param_description': 'The existing server whose details are to be changed.',
         'param_type': 'text', 'required': False, 'param_options': None}, {'param_name': 'serverprops', 'param_description': 'a set of key-value '
         'pairs for settings to change. Settings may be "changed" to the existing value, so it is permissible to pass in '
