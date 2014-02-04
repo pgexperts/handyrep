@@ -1,0 +1,36 @@
+
+<head>
+
+	<title>handyrepGUI<!--{% block title %}{% endblock %}--></title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body >
+    <div style="background-color: #fbf7f7;  margin: 0% auto ">
+    <nav id = "main_words_nav">
+        <ul class=" row">
+	        <li class="col span_1">&nbsp;</li>
+            <li class="col span_15"><a href="/"> <img style="height:120px" src="/static/handyrepfinalwithtext.gif"></a></li>
+            <li class="col span_3"><img style="height: 100px" src="/static/logo.png"></li>
+	        <li class="col span_1">&nbsp;</li>
+	    </ul>
+    </nav>
+    </div>
+{#    <hr/>#}
+
+	<nav id = "global_nav" style="" >
+
+	    <ul class="container row" >
+	        <li class="col span_1">&nbsp;</li>
+            {% for topic in topics %}
+	        <li class="col span_7" ><a style="text-align: center" href="/{{topic.Category|lower}}"><h1 >{{topic.Category}}</h1><p>{{topic.description}}</p></a></li>
+            {% endfor %}
+
+	        <li class="col span_1">&nbsp;</li>
+	    </ul>
+        <hr/>
+	</nav>
+
+    {% block content %} {% endblock %}
+</body>
+</html>

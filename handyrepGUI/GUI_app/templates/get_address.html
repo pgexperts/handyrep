@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+        {% block content %}
+            <h2 style="color: #231f20">Please enter the address where HandyRep is running. <span style="font-style: italic">Please remember to include http://</span></h2>
+            {% if message %}
+            <h2 style="color: red">{{ message }}</h2>
+            {% endif %}
+            <form action="" method="post" name="address">
+                {{form.hidden_tag()}}
+                <p >{{form.address(size=80)}}</p>
+                <h2 style="color: #231f20"> Please enter your HandyRep user name.</h2>
+                <p>{{form.username(size=80)}}</p>
+                <h2 style="color: #231f20"> Please enter your HandyRep password.</h2>
+                <p>{{form.password(size=80)}}</p>
+                <p><input type="submit" value="Submit"></p>
+
+            </form>
+        {% endblock %}
