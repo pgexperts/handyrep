@@ -4,7 +4,7 @@
 {% block detail %}
       <hr/>
     <div style="text-align: center" xmlns="http://www.w3.org/1999/html">
-<div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block">
+<div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block;max-width: 45%">
 <h1 style="color: #231f20; text-align: center; padding-left: 1.5em; padding-right: 1.5em">{{ function.function_name }}<br style="; padding-top: 20px"><span style=" font-size: .60em">{{ function.description }}</span>  </h1>
     </div>
     </div>
@@ -66,23 +66,3 @@
 
 
 {% endblock %}
-
-{##}
-{# THis is how to access each piece of data
-  {{ function.function_name }}#}
-{#    <br>#}
-{#    {{ function.description }}#}
-{#<br><br>#}
-{#    {%   for param in function.params %}#}
-{#        {{ param.param_name }}<br>#}
-{#        {{ param.param_type }}<br>#}
-{#        {{ param.param_description }}<br>#}
-{#        {% if param.param_options %}#}
-{#            {% for option in param.param_options %}#}
-{#                {{ option.option_name }}<br>#}
-{#                {{ option.description }}<br>#}
-{#            {% endfor %}#}
-{#        {% endif %}#}
-{##}
-{#    <br>#}
-{#    {% endfor %}#}

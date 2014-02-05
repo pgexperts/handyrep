@@ -1,8 +1,7 @@
 __author__ = 'kaceymiriholston'
 
 Categories = [
-    {'Category': 'Information', 'description': 'For functions designed to provide the administrator or monitoring software '
-                                               'with information about the status of various cluster resources.'},
+    {'Category': 'Information', 'description': 'Functions designed to provide information about the status of various cluster resources.'},
     {'Category': 'Availability', 'description': 'For maintaining uptime of the cluster. They include functions for '
                                                 'polling servers and for failover.'},
     {'Category': 'Action', 'description': 'For management of your handyrep cluster.'}]
@@ -17,12 +16,12 @@ Information = [
          {'option_name': 'cached', 'description': "Just return information from HandyRep's last check."},
          {'option_name': 'verify', 'description': 'Specify that the server is to fully verify all servers before returning status information.'}]}],
      'result_format': ''},
-    {'function_name': 'get_cluster_status', 'description': 'Returns the cluster status fields for the cluster.',
+    {'function_name': 'get_cluster_status', 'description': 'Returns the cluster status fields for the cluster. ',
      'short_description': 'Cluster status fields', 'params': [{'param_name': 'verify',
         'param_description': "A true value will verify all cluster data, a false value will just return cached data.", 'param_type': 'bool',
         'required': False,'param_options': None}],
      'result_format': ''},
-    {'function_name': 'get_master_name', 'description': 'Returns the name of the current master.',
+    {'function_name': 'get_master_name', 'description': 'Returns the name of the current master. \r  If there is no configured master, or if the master has been disabled, returns None.',
      'short_description': 'Current master\'s name', 'params': None, 'result_format': ''},
     {'function_name': 'get_server_info', 'description': 'Returns server configuration and status details for the named server(s).',
      'short_description': 'Configuration & Status detail', 'params': [{'param_name': 'servername', 'param_description': 'The server whose data to return. If None, '

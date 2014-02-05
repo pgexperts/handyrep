@@ -25,6 +25,8 @@ def get_section(section_name):
         section = Dictionary.Availability
     elif section_name == "action":
         section = Dictionary.Action
+    else:
+        section = None
     return section
 
 
@@ -62,6 +64,8 @@ def address():
 @app.route('/<topic>/')
 def information(topic):
     sections = get_section(topic)
+    if sections is None:
+        abort(404)
     return render_template("Section.html", topics=topic_list, topic=topic, Sections=sections)
 
 
@@ -124,7 +128,6 @@ def results(topic, function):
                 if not x.status_code == requests.codes.OK:
                     result_to_send = "Parameters were not entered correctly. Please renter them. Remember, handyrep is case sensitive."
                     return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send)
-                print x.text
                 result_to_send = x.json()
                 return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send)
         abort(404)
