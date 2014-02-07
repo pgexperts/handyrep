@@ -32,3 +32,6 @@ pip-log.txt
 
 #kate swap files
 .*kate-swp
+
+#Mac directory info
+.DS_Store

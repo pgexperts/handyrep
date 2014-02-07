@@ -1,4 +1,4 @@
-#!flask/bin/python
+from flask import Flask
 
 from GUI_app import app
 

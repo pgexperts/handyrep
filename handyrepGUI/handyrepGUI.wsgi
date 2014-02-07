@@ -1,2 +1,2 @@
-from hdaemon import app as application
+from handyrepGUI import app as application
 

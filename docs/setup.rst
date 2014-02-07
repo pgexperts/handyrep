@@ -137,6 +137,24 @@ handyrep.conf
 
 The main configuration file for HandyRep is usually called handyrep.conf, and needs to be named when starting HandyRep.  It has a lot of configuration variables in order to allow intergration with a wide variety of network and server infrastructures.
 
+Some general notes on making settings in handyrep.conf:
+
+**Disabling Settings**: It's preferred to set settings to nothing rather than deleting the entire setting.  This is as follows:
+
+::
+
+    archive_delete_method =
+
+... and *not* by setting the setting to "None", "NULL", "0" or "''", any of which may cause errors.
+
+Note that blanking a setting sets it to its default, *except* for plugin settings.
+
+**Booleans**: use "True" and "False".
+
+**Methods**: any setting called "*_method" refers to a plugin name, and its value should match a plugin name exactly.
+
+**File Paths**: since HandyRep is generally run under a web server, it is far better practice to use complete file paths and not relative file paths.
+
 Section handyrep
 ----------------
 
@@ -334,6 +352,8 @@ failover_priority = 999
 Section servers
 ---------------
 
+This section is read *only* during initial HandyRep setup, or if override_server_file is set to True.  Otherwise it is ignored in favor of the contents of servers.save.
+
 This section has a series of server definitions, each one of which has informtion about that server, in the form:
 
 ::
@@ -376,11 +396,9 @@ This section contains configuration information for each of the various plugins 
 
 The plugin_name here must match exactly the name as written in the *_method configuration where it is called, and the name of the python module of the plugin itself.  For this reason, configurations for plugins are global to their use, which may limit your ability to cope with differently configured nodes.
 
-Each plugin defines its own configuration settings.  See Plugins docs for more information.
+Each plugin defines its own configuration settings.  See Plugins docs for more information.  Plugin settings, in general, do *not* have defaults, so it's important to populate all required settings for plugins.
 
-If a plugin has no configuration, you should still define a section for it so that the lack of configuration is clearly intentional.
-
-The one exception to plugin configuration is the master_check_method, which uses the master_check_parameters in the handyrep section.
+If a plugin has no configuration, you should still define a section for it so that the lack of configuration is clearly intentional. The one exception to plugin configuration is the master_check_method, which uses the master_check_parameters in the handyrep section.
 
 
     

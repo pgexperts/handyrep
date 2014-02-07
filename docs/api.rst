@@ -231,9 +231,14 @@ Example:
 
     hr.get_server_info("john", False)
     
-    {'john': {u'clone_parameters': u'', u'status_ts': u'2013-11-14 00:35:49', u'streaming': True,
-    ...
-    u'restart_method': u'restart_pg_ctl', u'hostname': u'john'}}
+    { "john": {
+        "status": "healthy",
+        "status_ts": "2014-02-02 07:24:34",
+        "lag_limit": 1000,
+        ...
+        "hostname": "john",
+        "promotion_method": "promote_pg_ctl"
+    } }
 
 read_log
 --------

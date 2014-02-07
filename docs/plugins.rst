@@ -58,7 +58,7 @@ check_last_ip_db
 
 No parameters.
 
-_Configuration_
+**Configuration**
 
 last_ip_timeout
     window of time to consider a conflict between HandyRep masters.  Interval value; acceptable time amounts are: seconds, minutes, hours.  e.g. "60 seconds"
@@ -77,12 +77,12 @@ For the below plugins, they may have no specific configuration.  Most configurat
 poll_connect
 ~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 servername
     required.  The name of the server to poll in the servers dictionary.
 
-_Configuration_
+**Configuration**
 
 No specific configuration.
 
@@ -91,12 +91,12 @@ Polling method to use with older versions of PostgreSQL (pre-9.3).  Polls server
 poll_isready
 ~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 servername
     required.  The name of the server to poll in the servers dictionary.
 
-_Configuration_
+**Configuration**
 
 isready_path
     required.  full path to the pg_isready executable on the HandyRep server.
@@ -111,12 +111,12 @@ These plugins power the *archive_script_method* or *archive_delete_method* direc
 archive_local_dir
 ~~~~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 servername
     server to push the archive script to
 
-_Configuration_
+**Configuration**
 
 archive_directory
     full path to directory where archive copies are kept
@@ -137,7 +137,7 @@ cleanup_archive
 archivecleanup_path
     full path to pg_archivecleanup
 
-_Extra Methods_
+**Extra Methods**
 
 recoveryline
     returns archive recovery line or lines for recovery.conf
@@ -158,12 +158,12 @@ This plugin is meant for pushing archiving scripts to servers who write archives
 archive_two_servers
 ~~~~~~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 servername
     server to push the archive script to
 
-_Configuration_
+**Configuration**
 
 archive_directory
     full path to directory where archive copies are kept
@@ -184,7 +184,7 @@ disable_on_fail
     whether or not to automatically disable archiving if the
     replica no longer responds to ssh
 
-_Extra Methods_
+**Extra Methods**
 
 recoveryline
     returns archive recovery line or lines for recovery.conf
@@ -211,9 +211,9 @@ If disable_on_fail is true, then the replica is checked every Verify cycle.  If 
 archive_delete_find
 ~~~~~~~~~~~~~~~~~~~
 
-_No_ _Parameters_
+**No_ _Parameters**
 
-_Configuration_
+**Configuration**
 
 archive_delete_hours
     number of hours of logs to retain
@@ -233,7 +233,7 @@ The plugins control how new replicas are deployed based on creating a full file 
 clone_basebackup
 ~~~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 servername
     server name of the replica on which a clone is to be made
@@ -245,7 +245,7 @@ reclone
     whether to overwrite any existing database which may be
     already on the target server.
 
-_Configuration_
+**Configuration**
 
 basebackup_path
     full path to the pg_basebasebackup executable
@@ -265,16 +265,16 @@ These plugins control how replica status is calculated, particularly for determi
 replication_mb_lag_93
 ~~~~~~~~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 replicaserver
     the replica for which we calculate lag
 
-_Configuration_
+**Configuration**
 
 None
 
-_Extra Return Values_
+**Extra Return Values**
 
 lag
     replay lag in MB (approximate)
@@ -294,12 +294,12 @@ These plugins determine how a replica server is promoted, that is, turned into a
 promote_pg_ctl
 ~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 servername
     replica to be promoted
 
-_Configuration_
+**Configuration**
 
 pg_ctl_path
     full path to the pg_ctl executable
@@ -315,17 +315,17 @@ These plugins control how a replica is selected to become the new master for aut
 select_replica_priority
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 None
 
-_Configuration_
+**Configuration**
 
 None.
 
 Makes use of the *failover_priority* field on each replica's server configuration.
 
-_Extra Return Values_
+**Extra Return Values**
 
 Instead of an RD, returns a sorted list of replica server names.  If no replicas can be found, returns an empty list.
 
@@ -341,12 +341,12 @@ These plugins control your connection proxy so that it points to the correct mas
 multi_pgbouncer
 ~~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 newmaster
     optional, the name of the new master during a failover transition.  If not supplied the master from the serverlist is selected.
 
-_Configuration_
+**Configuration**
 
 pgbouncerbin
     full path to the pgbouncer executable.  Used for restarting pgbouncer.
@@ -372,7 +372,7 @@ all_replicas
 extra_connect_param
     extra connection parameters to be added to each database definition in pgbouncer.ini
 
-_Additional Methods_
+**Additional Methods**
 
 init()
     Parameters: bouncerserver (optional).  Supports main function connection_proxy_init.  Does initial overwriting of pgbouncer.ini during a non-failover situation.
@@ -398,7 +398,7 @@ multi_pgbouncer_bigip
 
 Parameters the same as multi_pgbouncer.
 
-_Configuration_
+**Configuration**
 
 Same as multi_pgbouncer, plus:
 
@@ -425,7 +425,7 @@ These plugins control starting, stopping and restarting PostgreSQL on masters an
 restart_pg_ctl
 ~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 servername
     target server name
@@ -433,7 +433,7 @@ servername
 runmode
     The service status change to be made: start, stop, faststop, restart, reload, or status.
 
-_Configuration_
+**Configuration**
 
 pg_ctl_path
     full path to pg_ctl executable
@@ -446,7 +446,7 @@ Makes changes to PostgreSQL's running status by calling the pg_ctl command as th
 restart_service
 ~~~~~~~~~~~~~~~
 
-_Parameters_
+**Parameters**
 
 servername
     target server name
@@ -454,7 +454,7 @@ servername
 runmode
     The service status change to be made: start, stop, faststop, restart, reload, or status.
 
-_Configuration_
+**Configuration**
 
 service_name
     The name of the service as configured in the service manager.
