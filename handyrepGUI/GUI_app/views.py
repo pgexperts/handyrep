@@ -129,6 +129,7 @@ def results(topic, function):
                     result_to_send = "Parameters were not entered correctly. Please renter them. Remember, handyrep is case sensitive."
                     return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send)
                 result_to_send = x.json()
+                print x.text
                 return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send)
         abort(404)
 

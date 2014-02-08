@@ -49,4 +49,13 @@
         {% endif %}
     {% endif %}
 </div>
+<div style="padding-left: 2em">
+      {% if function.result_information %}
+    <br/>
+    <h3>RESULTS INFORMATION</h3>
+    {% autoescape off %}
+        {{ function.result_information }}
+    {% endautoescape %}
+    {% endif %}
+</div>
 {% endblock %}

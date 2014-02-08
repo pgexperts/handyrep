@@ -2,7 +2,7 @@ __author__ = 'kaceymiriholston'
 
 Categories = [
     {'Category': 'Information', 'description': 'Functions designed to provide information about the status of various cluster resources.'},
-    {'Category': 'Availability', 'description': 'For maintaining uptime of the cluster. They include functions for '
+    {'Category': 'Availability', 'description': 'Functions related to maintaining uptime of the cluster. They include functions for '
                                                 'polling servers and for failover.'},
     {'Category': 'Action', 'description': 'For management of your handyrep cluster.'}]
 
@@ -15,12 +15,45 @@ Information = [
         'param_options': [{ 'option_name': 'poll', 'description': 'Specify that the server is to poll all servers before returning status information.'},
          {'option_name': 'cached', 'description': "Just return information from HandyRep's last check."},
          {'option_name': 'verify', 'description': 'Specify that the server is to fully verify all servers before returning status information.'}]}],
-     'result_format': ''},
+     'result_information': '<p>This returns status at two levels: for the cluster as a whole, and for each individual '
+                           'server. In both cases, status information consists of four fields:</p><h4>status</h4>'
+                           '<p style="padding-left:2em">one of "unknown","healthy","lagged","warning","unavailable", or "down". see below '
+                           'for explanation of these statuses.</p><h4>status_no</h4><p style="padding-left:2em">status number corresponding to above, '
+                           'for creating alert thresholds.</p><h4>status_ts</h4><p style="padding-left:2em">the last timestamp when status '
+                           'was checked, in unix standard format</p><h4>status_message</h4><p style="padding-left:2em">a message about the '
+                           'last issue found which causes a change in status. May not be complete or representative.</p>'
+                           '<h4>The individual servers also contain their name(hostname), their role(role) and if they are enabled'
+                           '(enabled).</h4><h3>Status meaning</h3><h3 style="padding-left:1em">Cluster Status Data</h3>'
+                           '<h4 style="padding-left:1.3em">0: "unknown"</h4><p style="padding-left:2em">status checks have not been run. This status '
+                           'should only exist for a very short time.</p><h4 style="padding-left:1.3em">1 : "healthy"</h4><p style="padding-left:2em">cluster has a viable master, and all replicas are "healthy" or "lagged" '
+                           '</p><h4 style="padding-left:1.3em">3 : "warning"</h4><p style="padding-left:2em">cluster has a viable master, but has one or more issues, including connnection problems, failure to fail over, or downed replicas.'
+                           '</p><h4 style="padding-left:1.3em">5 : "down"</h4><p style="padding-left:2em">cluster has no working master, or is in an indeterminate state and requires administrator intervention'
+                           '</p><h3 style="padding-left:1em">Individual Servers Status Data</h3>'
+                           '<h4 style="padding-left:1.3em">0: "unknown"</h4><p style="padding-left:2em">server has not been checked yet.'
+                           '</p><h4 style="padding-left:1.3em">1 : "healthy"</h4><p style="padding-left:2em">server is operating normally'
+                           '</p><h4 style="padding-left:1.3em">2 : "lagged"</h4><p style="padding-left:2em">for replicas, indicates that the replica is running but has exceeded the configured lag threshold.'
+                           '</p><h4 style="padding-left:1.3em">3 : "warning"</h4><p style="padding-left:2em">server is operating, but has one or more issues, such as inability to ssh, or out-of-connections.'
+                           '</p><h4 style="padding-left:1.3em">4 : "unavailable"</h4><p style="padding-left:2em">cannot determine status of server because we cannot connect to it.'
+                           '</p><h4 style="padding-left:1.3em">5 : "down"</h4><p style="padding-left:2em">.server is verified down'
+                           '</p>'},
+
     {'function_name': 'get_cluster_status', 'description': 'Returns the cluster status fields for the cluster. ',
      'short_description': 'Cluster status fields', 'params': [{'param_name': 'verify',
         'param_description': "A true value will verify all cluster data, a false value will just return cached data.", 'param_type': 'bool',
         'required': False,'param_options': None}],
-     'result_format': ''},
+     'result_information': '<p>This returns status for the cluster as a whole. Status information consists of four fields:</p><h4>status</h4>'
+                           '<p style="padding-left:2em">one of "unknown","healthy","lagged","warning","unavailable", or "down". see below '
+                           'for explanation of these statuses.</p><h4>status_no</h4><p style="padding-left:2em">status number corresponding to above, '
+                           'for creating alert thresholds.</p><h4>status_ts</h4><p style="padding-left:2em">the last timestamp when status '
+                           'was checked, in unix standard format</p><h4>status_message</h4><p style="padding-left:2em">a message about the '
+                           'last issue found which causes a change in status. May not be complete or representative.</p>'
+                           '<h4>The individual servers also contain their name(hostname), their role(role) and if they are enabled'
+                           '(enabled).</h4><h3>Status meaning</h3><h3 style="padding-left:1em">Cluster Status Data</h3>'
+                           '<h4 style="padding-left:1.3em">0: "unknown"</h4><p style="padding-left:2em">status checks have not been run. This status '
+                           'should only exist for a very short time.</p><h4 style="padding-left:1.3em">1 : "healthy"</h4><p style="padding-left:2em">cluster has a viable master, and all replicas are "healthy" or "lagged" '
+                           '</p><h4 style="padding-left:1.3em">3 : "warning"</h4><p style="padding-left:2em">cluster has a viable master, but has one or more issues, including connnection problems, failure to fail over, or downed replicas.'
+                           '</p><h4 style="padding-left:1.3em">5 : "down"</h4><p style="padding-left:2em">cluster has no working master, or is in an indeterminate state and requires administrator intervention'
+                           '</p>'},
     {'function_name': 'get_master_name', 'description': 'Returns the name of the current master. \r  If there is no configured master, or if the master has been disabled, returns None.',
      'short_description': 'Current master\'s name', 'params': None, 'result_format': ''},
     {'function_name': 'get_server_info', 'description': 'Returns server configuration and status details for the named server(s).',
@@ -33,7 +66,7 @@ Information = [
      'short_description': 'handyrep log lines', 'params': [{'param_name': 'numlines', 'param_description': 'How many lines of the log to retrieve.', 'param_type':'text',
                 'required': False, 'param_options': None}],
      'result_format': ''},
-    {'function_name': 'get_setting', 'description': 'Retrieves a single configuration setting.', 'short_description': 'A configuration setting', 'params': [{'param_name': 'category',
+    {'function_name': 'get_setting', 'description': 'Retrieves a single configuration setting. Can not retrieve nested settings.', 'short_description': 'A configuration setting', 'params': [{'param_name': 'category',
                 'param_description': 'Section of the config the setting is in.', 'param_type':'text', 'required': False,
                 'param_options': None},{'param_name': 'setting', 'param_description': 'The individual setting name.', 'param_type': 'text',
                 'required': True, 'param_options': None}],
