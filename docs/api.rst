@@ -301,8 +301,7 @@ Some central concepts:
 
 * "poll" means to use the lightweight polling method to check servers, whereas "verify" does a more complete (and time-consuming) check that servers are fully operational.
 * the cluster is considered "available" if the master is running and healthy, even if we have no replicas.
-* program logic is designed to avoid false positives; if the status of a
-a server cannot be unambiguously determined, it simply sounds the alarm
+* program logic is designed to avoid false positives; if the status of a server cannot be unambiguously determined, it simply sounds the alarm
 and aborts rather than performing an unnecessary failover.
 
 failover_check

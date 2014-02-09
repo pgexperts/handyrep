@@ -126,6 +126,8 @@ def results(topic, function):
                 else:
                     x = requests.get(url_to_send, params=function_parameters, auth=(username, password))
                 if not x.status_code == requests.codes.OK:
+                    print x.status_code
+                    print x.text
                     result_to_send = "Parameters were not entered correctly. Please renter them. Remember, handyrep is case sensitive."
                     return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send)
                 result_to_send = x.json()

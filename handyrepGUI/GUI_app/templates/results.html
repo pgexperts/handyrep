@@ -29,12 +29,13 @@
                     {% endif %}
                 {% endfor %}
             {% else %}
-                {% if not results is string %}
-                    {% for result in results %}
-                        <h3>{{ result }}</h3>
-                    {% endfor %}
-                {% else %}
+                {% if results is string %}
                     <h3 style="padding-left: 2em">{{ results }}: {{ result_to_send.get(results) }} </h3>
+
+                {% else %}
+                    {% for result in results %}
+                        <h3>result:{{ result }}</h3>
+                    {% endfor %}
                 {% endif %}
             {% endif %}
 
@@ -52,7 +53,7 @@
 <div style="padding-left: 2em">
       {% if function.result_information %}
     <br/>
-    <h3>RESULTS INFORMATION</h3>
+    <h2>RESULTS INFORMATION</h2>
     {% autoescape off %}
         {{ function.result_information }}
     {% endautoescape %}
