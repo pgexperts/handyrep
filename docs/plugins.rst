@@ -239,7 +239,7 @@ servername
     server name of the replica on which a clone is to be made
 
 clonefrom
-    server name of the server to clone from.  Usuall the overal master server.
+    server name of the server to clone from.  Usually the overall master server.
 
 reclone
     whether to overwrite any existing database which may be
@@ -256,6 +256,49 @@ extra_parameters
 Also makes use of *replication_user* from the *handyrep* section.
 
 Does a full copy of the master to a new replica using pg_basebackup -x.  If reclone is selected, does an "rm -rf *" on the PGDATA directory on the target server first.  For this reason, this plugin will need an update before it works on Windows.
+
+If reclone is not set, and the target server is known to HR to be a running PostgreSQL server, the plugin will fail the reclone.
+
+Also, clone_basebackup currently does not handle tablespaces or symlinks (to WAL, for example) at all.  Nor does it create a pg_stat directory if a separate one is being used.
+
+clone_rsync
+~~~~~~~~~~~
+
+**Parameters**
+
+servername
+    server name of the replica on which a clone is to be made
+
+clonefrom
+    server name of the server to clone from.  Usually the overall master server.
+
+reclone
+    whether to overwrite any existing database which may be
+    already on the target server.
+
+**Configuration**
+
+rsync_path
+    full path to the rsync executable on the replica
+
+use_ssh
+    boolean; whether to use SSH for rsync or not
+
+ssh_path
+    full path to the SSH executable on the replica
+
+extra_parameters
+    additional paramters to be passed to rsync, if any
+
+Also makes use of *replication_user* from the *handyrep* section.
+
+Also makes use of the optional *wal_location* setting for the master and replica servers.  You must add this to each server config if you want to symlink WAL to a new location.
+
+Clones a new replica server from the replica using rsync, which is more suitable for large databases.  Assumes either passwordless/passphraseless ssh or a passwordless rsync server is expected.  Support for passwords could be added, but is not currently present.
+
+Command-line commands are 
+
+Clone_rsync currently does not handle tablespaces, although that could easily be added in the future.
 
 Replica Status Plugins
 ----------------------

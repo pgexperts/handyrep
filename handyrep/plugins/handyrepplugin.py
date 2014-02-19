@@ -1,6 +1,6 @@
 from fabric.api import sudo, run, env, local, settings, shell_env
 from fabric.network import disconnect_all
-from fabric.contrib.files import upload_template
+from fabric.contrib.files import upload_template, exists
 #from fabric.context_managers import shell_env
 from lib.error import CustomError
 from lib.dbfunctions import get_one_val, get_one_row, execute_it, get_pg_conn
@@ -123,6 +123,19 @@ class HandyRepPlugin(object):
                 break
 
         return rundict
+
+    def file_exists(self, servername, filepath):
+        # checks whether a particular file or directory path
+        # exists
+        # returns only true or false rather than RD
+        env.key_filename = self.servers[servername]["ssh_key"]
+        env.user = self.servers[servername]["ssh_user"]
+        env.disable_known_hosts = True
+        env.host_string = self.servers[servername]["hostname"]
+        if exists(filepath, use_sudo=True):
+            return True
+        else:
+            return False
 
     def push_template(self, servername, templatename, destination, template_params, new_owner=None, file_mode=700):
         # renders a template file and pushes it to the

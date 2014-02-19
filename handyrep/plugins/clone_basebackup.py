@@ -1,7 +1,5 @@
-# generic failure plugin
-# designed to substitute for a real plugin when
-# the real plugin errors out
-# this way we can hand a readable error message up the stack
+# simple cloning plugin for cloning via basebackup
+# does NOT deal with things like tablespaces and relocated WAL
 
 from plugins.handyrepplugin import HandyRepPlugin
 

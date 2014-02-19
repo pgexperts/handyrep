@@ -35,3 +35,8 @@ pip-log.txt
 
 #Mac directory info
 .DS_Store
+
+#emacs temp files
+*~
+[#]*[#]
+.\#*
