@@ -85,7 +85,7 @@ class clone_rsync(HandyRepPlugin):
 
         mastdata = self.servers[clonefrom]["pgdata"]
         repdata = self.servers[servername]["pgdata"]
-        rscmd = "%s -av --delete %s %s %s/* %s" % (rsloc, compopt, sshopt, mastdata, repdata,)
+        rscmd = """%s -av --delete --exclude postmaster.pid --exclude recovery.conf --exclude recovery.done --exclude postgresql.conf --exclude pg_log --exclude pg_xlog %s %s %s/* %s""" % (rsloc, compopt, sshopt, mastdata, repdata,)
         return rscmd
 
     def stop_backup(self, servername):
