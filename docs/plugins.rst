@@ -287,6 +287,10 @@ use_ssh
 ssh_path
     full path to the SSH executable on the replica
 
+use_compression
+    boolean; disable in order to turn off compression if
+    you care more about speed than bandwidth
+
 extra_parameters
     additional paramters to be passed to rsync, if any
 
@@ -296,7 +300,7 @@ Also makes use of the optional *wal_location* setting for the master and replica
 
 Clones a new replica server from the replica using rsync, which is more suitable for large databases.  Assumes either passwordless/passphraseless ssh or a passwordless rsync server is expected.  Support for passwords could be added, but is not currently present.
 
-Command-line commands are 
+Not currently Windows-compatible.
 
 Clone_rsync currently does not handle tablespaces, although that could easily be added in the future.
 

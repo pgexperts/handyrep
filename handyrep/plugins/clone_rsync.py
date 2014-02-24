@@ -11,21 +11,21 @@ class clone_rsync(HandyRepPlugin):
         # we assume that upstream has already checked that it is safe
         # to reclone, so we don't worry about it
 
-        myconf = self.myconf()
+        myconf = self.get_myconf()
         # issue pg_stop_backup() on the master
-        mconn = self.master_connection(autocommit=True)
+        mconn = self.master_connection(mautocommit=True)
         if not mconn:
             return self.rd(False, "unable to connect to master server to start cloning")
 
         blabel = "hr_clone_%s" % servername
-        mcur = mconn.connection()
+        mcur = mconn.cursor()
         bstart = self.execute_it(mcur, "SELECT pg_start_backup(%s, TRUE)", [blabel,])
         mconn.close()
         if not bstart:
             return self.rd(False, "unable to start backup for cloning")
 
         # rsync PGDATA on the replica
-        synccmd = self.rsync_command(servername, clonefrom, "pgdata")
+        synccmd = self.rsync_command(servername, clonefrom)
         syncit = self.run_as_postgres(servername, synccmd)
         if self.failed(syncit):
             self.stop_backup(servername)
@@ -62,13 +62,39 @@ class clone_rsync(HandyRepPlugin):
 
         return os.path.join(self.servers[servername]["pgdata"], "pg_xlog")
 
+    def rsync_command(servername, clonefrom):
+        # create rsync command line
+        myconf = self.get_myconf()
+        if myconf["use_compression"]:
+            compopt = " -z "
+        else:
+            compopt = ""
+
+        if myconf["rsync_path"]:
+            rsloc = myconf["rsync_path"]
+        else:
+            rsloc = "rsync"
+
+        if myconf["use_ssh"]:
+            if myconf["ssh_path"]:
+                sshloc = myconf["ssh_path"]
+            else:
+                sshloc = "ssh"
+                
+            sshopt = """ -e "%s Compression=no" """ % sshloc
+
+        mastdata = self.servers[clonefrom]["pgdata"]
+        repdata = self.servers[servername]["pgdata"]
+        rscmd = "%s -av %s %s %s/* %s" % (rsloc, compopt, sshopt, mastdata, repdata,)
+        return rscmd
+
     def stop_backup(self, servername):
         
-        mconn = self.master_connection(autocommit=True)
+        mconn = self.master_connection(mautocommit=True)
         if not mconn:
             return self.rd(False, "unable to connect to master server to stop backup")
 
-        mcur = mconn.connection()
+        mcur = mconn.cursor()
         bstart = self.execute_it(mcur, "SELECT pg_stop_backup()")
         mconn.close()
         

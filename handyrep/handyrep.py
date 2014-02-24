@@ -1693,7 +1693,7 @@ class HandyRep(object):
         try:
             conn = psycopg2.connect( connect_string )
         except:
-            self.log("ERROR: Unable to connect to Postgres using the connections string %s" % connect_string)
+            self.log("DBCONN","ERROR: Unable to connect to Postgres using the connections string %s" % connect_string)
             raise CustomError("DBCONN","ERROR: Unable to connect to Postgres using the connections string %s" % connect_string)
 
         if autocommit:
@@ -1770,7 +1770,7 @@ class HandyRep(object):
         reptest = self.is_replica(mconn.cursor())
         if reptest:
             mconn.close()
-            self.log("Server configured as the master is actually a replica, aborting connection.", True)
+            self.log("CONFIG", "Server configured as the master is actually a replica, aborting connection.", True)
             raise CustomError("CONFIG","Server configured as the master is actually a replica, aborting connection.")
         
         return mconn

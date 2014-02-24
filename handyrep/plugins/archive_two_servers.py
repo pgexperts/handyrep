@@ -59,7 +59,7 @@ class archive_two_servers(HandyRepPlugin):
                 if repstat > 3:
                     # replica is down, check that we can ssh to it
                     sshcheck = self.run_as_handyrep(repservs[0], [self.conf["handyrep"]["test_ssh_command"],])
-                    if failed(sshcheck):
+                    if self.failed(sshcheck):
                         touchit = "touch %s" % myconf["stop_archiving_file"]
                         disabled = self.run_as_postgres(self.get_master_name(),[touchit,])
                         if succeeded(disabled):

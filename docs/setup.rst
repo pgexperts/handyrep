@@ -165,7 +165,8 @@ override_server_file
     If set to True, HandyRep will take server definitions from handyrep.conf instead of from saved server information.
     
 server_file
-    Filename (or full path) for the servers JSON definition file.  Default servers.save.
+    Filename for the servers JSON definition file.  Default servers.save.  If running HandyRep under WSGI, this needs to be
+    a full path, not just a filename.
     
 master_check_method
     Plugin to use in order to check if this HandyRep is the current HandyRep master server.  See "Multiple HandyRep Servers" in Usage.
@@ -201,7 +202,7 @@ replication_user
     Name of the user used for streaming replication connections.  Often the same as the superuser.
     
 templates_dir
-    Directory where the templates are stored.
+    Directory where the templates are stored.  If running under WSGI, needs to be a full path.
     
 test_ssh_command
     Simple always-succeeds command to test if SSH access is working.  Default is "ls".
@@ -211,6 +212,10 @@ push_alert_method
 
 Section passwords
 -----------------
+
+Passwords for various things.  This section does not get displayed in API calls for config variables.
+Database passwords can be left blank if using .pgpass files or some form of
+passwordless authentication.
 
 handyrep_db_pass
     Password for the handyrep database user, if required.
@@ -222,10 +227,10 @@ replication_pass
     Password for replication user
 
 admin_password
-    API password for HandyRep administration rights in the REST interface.
+    API password for HandyRep administration rights in the REST interface, if using "simple" authentication.
 
 read_password
-    API password for HandyRep read-only rights.
+    API password for HandyRep read-only rights, if using "simple" authentication.
 
 
 Section failover
@@ -267,6 +272,10 @@ connection_failover_method
 replication_status_method
     Plugin name for the plugin used to check status of each replica, both replication connection and lag.
 
+poll_connection_proxy
+    Should handyrep poll connection proxies (such as pgBouncer) every verify cycle
+    to see if they're still running?
+
 Section extra_failover_commands
 -------------------------------
 
@@ -283,30 +292,13 @@ Section archive
 
 archiving
     Is PostgreSQL doing WAL archiving as well as streaming replication?
-    
-archive_server
-    Server name of the server where the archive files are kept.  See Servers below.
-    
-archive_directory
-    Name of the directory where WAL archive files are kept, if applicable.
-    
-archive_bin
-    Full path of the executable script run as the archive_command on the master PostgreSQL server.
-    
-archive_template
-    Name of the template for the archiving script.
-    
-push_archive_script
-    Should HandyRep push a rewritten archiving script to each server?
 
-archive_delete_hours
-    Number of hours archive WAL files should be kept.  If HandyRep is not managing expiration, set to zero.
+archive_script_method
+    Plugin name for the archiving script, which controls how archiving happens.
+    Also controls start, stop and poll methods for archiving.
 
 archive_delete_method
-    Plugin name of how to figure out which files to delete that are older than archive_delete_hours.
-
-no_archive_file
-    Trigger file to disable archiving, if enabled in your template.
+    Plugin name of how to figure out which files to delete.  Used only for shared archives.
 
 Section server_defaults
 -----------------------
@@ -373,16 +365,16 @@ hostname
     The DNS name or IP address of the server.
 
 role
-    The role of the server in replication.  Options include master, replica, archive, and proxy, but any label can be used.  HandyRep cares only about "master" and "replica"; other labels are there for administrator information only,
-    or to support certain plugins (such as "multi_pgbouncer"), or for archiving.
+    The role of the server in replication. Handyrep requires "master" and "replica" roles, which are the only PostgreSQL servers.  However, certain plugins use additional server roles, such as "archive", "pgbouncer", and "proxy".
 
 failover_priority
     The priority of this server to be the new master in a failover event, if using the select_by_priority method, or if breaking ties with other methods.  Lower numbers are chosen first.
 
 enabled
-    Is this server enabled for replication?  Note that non-database servers may be marked as "False" even though they may be used for some other purpose (i.e. archive storage).
+    Is this server enabled?  Disabled servers are ignored for most
+    purposes.
 
-In addition to the above, each server definition may change any of the various settings in server_defaults.
+In addition to the above, each server definition may change any of the various settings in server_defaults.  You may also add additional settings not used in server_defaults, such as setting "ip_address" required by the multi_pgbouncer_bigip plugin. 
 
 Section plugins
 ---------------
@@ -399,10 +391,6 @@ The plugin_name here must match exactly the name as written in the *_method conf
 Each plugin defines its own configuration settings.  See Plugins docs for more information.  Plugin settings, in general, do *not* have defaults, so it's important to populate all required settings for plugins.
 
 If a plugin has no configuration, you should still define a section for it so that the lack of configuration is clearly intentional. The one exception to plugin configuration is the master_check_method, which uses the master_check_parameters in the handyrep section.
-
-
-    
-
 
 
 
