@@ -19,7 +19,7 @@ class clone_rsync(HandyRepPlugin):
 
         blabel = "hr_clone_%s" % servername
         mcur = mconn.cursor()
-        bstart = self.execute_it(mcur, "SELECT pg_start_backup(%s, TRUE)", [blabel,])
+        bstart = self.execute_it(mcur, "SELECT pg_start_backup('%s', TRUE)", [blabel,])
         mconn.close()
         if not bstart:
             return self.rd(False, "unable to start backup for cloning")
@@ -85,7 +85,7 @@ class clone_rsync(HandyRepPlugin):
 
         mastdata = self.servers[clonefrom]["pgdata"]
         repdata = self.servers[servername]["pgdata"]
-        rscmd = "%s -av %s %s %s/* %s" % (rsloc, compopt, sshopt, mastdata, repdata,)
+        rscmd = "%s -av --delete %s %s %s/* %s" % (rsloc, compopt, sshopt, mastdata, repdata,)
         return rscmd
 
     def stop_backup(self, servername):
