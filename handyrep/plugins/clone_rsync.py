@@ -7,9 +7,11 @@ import os.path
 
 class clone_rsync(HandyRepPlugin):
 
-    def run(self, servername, clonefrom, reclone):
+    def run(self, servername, clonefrom=None, reclone=False):
         # we assume that upstream has already checked that it is safe
         # to reclone, so we don't worry about it
+        if not clonefrom:
+            clonefrom = self.get_master_name()
 
         myconf = self.get_myconf()
         # issue pg_stop_backup() on the master
@@ -19,14 +21,14 @@ class clone_rsync(HandyRepPlugin):
 
         blabel = "hr_clone_%s" % servername
         mcur = mconn.cursor()
-        bstart = self.execute_it(mcur, "SELECT pg_start_backup('%s', TRUE)", [blabel,])
+        bstart = self.execute_it(mcur, "SELECT pg_start_backup(%s, TRUE)", [blabel,])
         mconn.close()
         if not bstart:
             return self.rd(False, "unable to start backup for cloning")
 
         # rsync PGDATA on the replica
         synccmd = self.rsync_command(servername, clonefrom)
-        syncit = self.run_as_postgres(servername, synccmd)
+        syncit = self.run_as_postgres(servername, [synccmd,])
         if self.failed(syncit):
             self.stop_backup(servername)
             return self.rd(False, "unable to rsync files")
@@ -35,7 +37,7 @@ class clone_rsync(HandyRepPlugin):
         # we don't create this wal location, since there's
         # no reason for it to have been deleted.
         repwal = self.wal_path(servername)
-        if self.file_exists(repwal):
+        if self.file_exists(servername, repwal):
             syncit = self.run_as_postgres(servername, ["rm -rf %s/*" % repwal,])
         else:
             syncit = self.run_as_postgres(servername, ["mkdir %s" % repwal,])
@@ -55,17 +57,17 @@ class clone_rsync(HandyRepPlugin):
             return self.rd(False, "cloning failed; could not stop backup")
 
     def wal_path(self, servername):
-        myconf = self.myconf()
+        myconf = self.get_myconf()
         if "wal_location" in self.servers[servername]:
             if self.servers[servername]["wal_location"]:
                 return self.servers[servername]["wal_location"]
 
         return os.path.join(self.servers[servername]["pgdata"], "pg_xlog")
 
-    def rsync_command(servername, clonefrom):
+    def rsync_command(self, servername, clonefrom):
         # create rsync command line
         myconf = self.get_myconf()
-        if myconf["use_compression"]:
+        if self.is_true(myconf["use_compression"]):
             compopt = " -z "
         else:
             compopt = ""
@@ -75,15 +77,15 @@ class clone_rsync(HandyRepPlugin):
         else:
             rsloc = "rsync"
 
-        if myconf["use_ssh"]:
+        if self.is_true(myconf["use_ssh"]):
             if myconf["ssh_path"]:
                 sshloc = myconf["ssh_path"]
             else:
                 sshloc = "ssh"
                 
-            sshopt = """ -e "%s Compression=no" """ % sshloc
+            sshopt = """ -e "%s -o Compression=no -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" """ % sshloc
 
-        mastdata = self.servers[clonefrom]["pgdata"]
+        mastdata = "%s:%s" % (self.servers[clonefrom]["hostname"], self.servers[clonefrom]["pgdata"],)
         repdata = self.servers[servername]["pgdata"]
         rscmd = """%s -av --delete --exclude postmaster.pid --exclude recovery.conf --exclude recovery.done --exclude postgresql.conf --exclude pg_log --exclude pg_xlog %s %s %s/* %s""" % (rsloc, compopt, sshopt, mastdata, repdata,)
         return rscmd
