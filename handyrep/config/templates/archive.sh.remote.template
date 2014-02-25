@@ -13,7 +13,7 @@
 SOURCE="$1" # %p
 FILE="$2" # %f
 DEST="{{ archive_directory }}/${2}"
-export RSYNC_RSH="ssh"
+export RSYNC_RSH="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 # See whether we want all archiving off
 test -f {{ no_archive_file }} && exit 0
