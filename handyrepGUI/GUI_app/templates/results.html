@@ -1,39 +1,62 @@
 {% extends "Section.html" %}
 
 {% block detail %}
-
-<h1 style="color: #231f20; text-align: center">{{ function.function_name }}<br><span style=" font-size: .60em">{{ function.description }}</span></h1>
+    <hr/>
+    <div style="text-align: center;" >
+<div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block;max-width: 45%">
+<h1 style="color: #231f20; text-align: center; padding-right: 1.5em; padding-left: 1.5em">{{ function.function_name }}<br><span style=" font-size: .60em">{{ function.description }}</span></h1>
+</div></div>
+<div style="padding-left: 2em">
     {% if result_to_send is mapping %}
         {% for results in result_to_send %}
+            {% if result_to_send.get(results) is mapping %}
+                <h2>{{ results }} </h2>
+                {% for result in result_to_send.get(results) %}
+                    {% if result_to_send.get(results).get(result) is mapping %}
+                        <h3 style="padding-left: 2em">{{ result }}</h3>
+                        {% for item in result_to_send.get(results).get(result) %}
+                            <h4 style="padding-left: 4em"> {{ item }}: {{ result_to_send.get(results).get(result).get(item) }}</h4>
 
-        {% if result_to_send.get(results) is mapping %}
-            <p>{{ results }}</p>
-        {% if result_to_send.get(results) is mapping %}
-        {%  for result in result_to_send.get(results) %}
-            <p>{{result}}:
-            {% if result_to_send.get(results).get(result) is mapping %}
-                {% for item in result_to_send.get(results).get(result) %}
-
-                    <br>{{ item }}: {{ result_to_send.get(results).get(result).get(item) }}
+                        {% endfor %}
+                    {% else %}
+                        {% if not result is string %}
+                            {% for result in results %}
+                                {{ result }}
+                            {% endfor %}
+                        {% else %}
+                            <h4 style="padding-left: 2em"> {{ result }}: {{ result_to_send.get(results).get(result) }}</h4>
+                        {% endif %}
+                    {% endif %}
                 {% endfor %}
             {% else %}
-                {% if result_to_send.get(results).get(result)  %}
-                    {{ result_to_send.get(results).get(result) }}
+                {% if results is string %}
+                    <h3 style="padding-left: 2em">{{ results }}: {{ result_to_send.get(results) }} </h3>
+
+                {% else %}
+                    {% for result in results %}
+                        <h3>result:{{ result }}</h3>
+                    {% endfor %}
                 {% endif %}
             {% endif %}
-            </p>
+
         {% endfor %}
-        {% endif %}
-        {% else %}
-            {% if result_to_send.get(results) %}
-            <p>{{ results }}: {{ result_to_send.get(results) }}</p>
-             {% endif %}
-        {% endif %}
-
-    {% endfor %}
     {% else %}
-        {{ result_to_send }}
+        {% if not result_to_send is string and result_to_send is iterable %}
+            {% for results in result_to_send %}
+                <h3>{{results}}</h3>
+            {% endfor %}
+        {% else %}
+            <h2> {{ result_to_send }}</h2>
+        {% endif %}
     {% endif %}
-
-<hr/>
+</div>
+<div style="padding-left: 2em">
+      {% if function.result_information %}
+    <br/>
+    <h2>RESULTS INFORMATION</h2>
+    {% autoescape off %}
+        {{ function.result_information }}
+    {% endautoescape %}
+    {% endif %}
+</div>
 {% endblock %}

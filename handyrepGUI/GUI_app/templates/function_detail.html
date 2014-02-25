@@ -1,8 +1,16 @@
 {% extends "Section.html" %}
 
+
 {% block detail %}
-<h1 style="color: #231f20; text-align: center">{{ function.function_name }}:<br><span style=" font-size: .60em">{{ function.description }}</span>  </h1>
-    <h2 style="color: #231f20">Please choose your options</h2>
+      <hr/>
+    <div style="text-align: center" xmlns="http://www.w3.org/1999/html">
+<div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block;max-width: 45%">
+<h1 style="color: #231f20; text-align: center; padding-left: 1.5em; padding-right: 1.5em">{{ function.function_name }}<br style="; padding-top: 20px"><span style=" font-size: .60em">{{ function.description }}</span>  </h1>
+    </div>
+    </div>
+
+    <div class = span_20 style="padding-left: 5em; ">
+    <h1 style="color: #231f20; font-size: 1.75em">Please choose your options</h1>
     <p style="color: red">{{ message }}</p>
   <form action="" method="post" name = "true_false">
   {{ form.hidden_tag() }}
@@ -10,14 +18,14 @@
   {% set tx = 1 %}
     {%   for param in function.params %}
 
-        <h3>{{ param.param_name }} -- {{ param.param_description }}</h3>
+        <h2>{{ param.param_name }}<br> <span style="padding-left: 1em; font-size: .8em"> {{ param.param_description }}</span></h2>
         {% if param.param_options %}
-            <h4>Please choose from one of the following.</h4>
+            <h3>Please choose from one of the following.</h3>
             {% for option in param.param_options %}
-                {{ option.option_name }} -- {{ option.description }}<br>
+               <span style="font-weight: bold"> {{ option.option_name }}</span> <br/> <span style="padding-left: 1em">{{ option.description }}<br><br></span>
             {% endfor %}
         {% endif %}
-
+         <span style="padding-left: 1em">
         {% if param.param_type == "bool"%}
             Please click if you want true:
             {% if tf == 1 %}
@@ -47,30 +55,14 @@
                 {% if param.required %}
             <span style="color: red"> (This option is required.)</span>
         {% endif %}
+        </span>
     {% endfor %}
-   <br>
+   <br><br>
+  <div style="padding-left: 2em">
     <input type="submit" value="Submit"></p>
+      </div>
   </form>
+</div>
 
-<hr/>
+
 {% endblock %}
-
-{##}
-{# THis is how to access each piece of data
-  {{ function.function_name }}#}
-{#    <br>#}
-{#    {{ function.description }}#}
-{#<br><br>#}
-{#    {%   for param in function.params %}#}
-{#        {{ param.param_name }}<br>#}
-{#        {{ param.param_type }}<br>#}
-{#        {{ param.param_description }}<br>#}
-{#        {% if param.param_options %}#}
-{#            {% for option in param.param_options %}#}
-{#                {{ option.option_name }}<br>#}
-{#                {{ option.description }}<br>#}
-{#            {% endfor %}#}
-{#        {% endif %}#}
-{##}
-{#    <br>#}
-{#    {% endfor %}#}
