@@ -36,9 +36,9 @@ It is available under The PostgreSQL License.  See LICENSE.txt for details.
 Trademark
 =========
 
-The HandyRep name and HandyRep logo are trademarks of PostgreSQL Experts Inc.  Permission to use
-this trademark is granted provided that such use is in reference to the HandyRep Project,
+The HandyRep name, HandyRep logo, and PGX Logo are trademarks of PostgreSQL Experts Inc.  Permission to use
+these trademark is granted provided that such use is in reference to PostgreSQL Experts, the HandyRep Project,
 software packages composed of the HandyRep Project's code, or usage or forks of the HandyRep Project code.  
-You may not state or imply, through such usage, ownership of the HandyRep trademark, or endorsement
-of any product, service, organization, or person by the HandyRep Project. Any other use requires
-written permission by PostgreSQL Experts, Inc.
+You may not state or imply, through such usage, ownership of these trademarks, or endorsement
+of any product, service, organization, or person by the HandyRep Project or PostgreSQL Experts Inc. 
+Any other use requires written permission by PostgreSQL Experts, Inc.
