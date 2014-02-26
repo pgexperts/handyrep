@@ -1,2 +1,2 @@
-from handyrepGUI import app as application
+from GUI_app import app as application
 

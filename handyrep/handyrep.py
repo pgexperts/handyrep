@@ -24,6 +24,7 @@ class HandyRep(object):
         # in order to support web services execution
         validconf = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config/handyrep-validate.conf')
         self.conf = config.read(validconf)
+        self.conf["handyrep"]["config_file"] = config_file
         try:
             logging.basicConfig(filename=self.conf["handyrep"]["log_file"], datefmt="%Y-%m-%d %H:%M:%S", format="%(asctime)-12s %(message)s")
         except Exception as ex:
