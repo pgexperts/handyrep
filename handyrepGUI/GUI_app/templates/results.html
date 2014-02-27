@@ -1,7 +1,29 @@
 {% extends "Section.html" %}
-
-{% block detail %}
+{% block content %}
     <hr/>
+    <div style="text-align: center; ">
+<div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block;  ">
+    <h3 style="color: #231f20; text-align: center; padding-left: 3em; padding-right: 3em">&nbsp{{topic | capitalize}}&nbsp</h3>
+</div>
+    </div>
+       <nav id = "global_nav"  >
+       {% if topic == "action" %}
+           {% for section in Sections %}
+            <li class="col span_3" style="text-align: center"><a href="/{{topic|lower}}/{{section.function_name}}"><p title="{{section.description}}">{{ section.short_description }}<br></p></a></li>
+        {% endfor %}
+        {% endif %}
+        {% if topic == "availability" %}
+           {% for section in Sections %}
+            <li class="col span_5" style="text-align: center"><a href="/{{topic|lower}}/{{section.function_name}}"><p title="{{section.description}}">{{ section.short_description }}<br> </p></a></li>
+        {% endfor %}
+        {% endif %}
+              {% if topic == "information" %}
+           {% for section in Sections %}
+            <li class="col span_3a" style="text-align: center"><a href="/{{topic|lower}}/{{section.function_name}}"><p title="{{section.description}}">{{ section.short_description }}<br> </p></a></li>
+        {% endfor %}
+        {% endif %}
+       </nav>
+<hr/>
     <div style="text-align: center;" >
 <div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block;max-width: 45%">
 <h1 style="color: #231f20; text-align: center; padding-right: 1.5em; padding-left: 1.5em">{{ function.function_name }}<br><span style=" font-size: .60em">{{ function.description }}</span></h1>

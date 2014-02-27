@@ -86,6 +86,20 @@ def function(topic, function):
                     return redirect(url)
                 else:
                     form = FunctionForm()
+                    t_f = 1#This enables us to produce the number of form items needed. Please inform if there is a more streamline way to do this.
+                    txt = 1
+                    for params in functions['params']:
+                        if params['param_type'] == 'text' or params['param_type'] == 'choice':
+                            if params["param_default"]:
+                                getattr(form, 'textdata%d'%txt).data = params["param_default"]
+                            txt += 1
+
+                        elif params['param_type'] == 'bool':
+                            if params["param_default"]:
+                                getattr(form, 'true_false%d'%txt).data = params["param_default"]
+                            t_f += 1
+
+
                     if form.validate_on_submit():
                         t_f = 1#This enables us to produce the number of form items needed. Please inform if there is a more streamline way to do this.
                         txt = 1
@@ -97,12 +111,17 @@ def function(topic, function):
                                     message = "Please enter the required field."
                                     return render_template("function_detail.html", topics=topic_list, Sections=sections,
                                                            topic=topic, function=functions, form=form, message=message)
-                                if not getattr(form, 'textdata%d' % txt).data == "":#Don't want to send blank data
-                                    function_parameters[params['param_name']] = getattr(form, 'textdata%d'%txt).data
+                                print getattr(form, 'textdata%d' % txt).data
+                                if not getattr(form, 'textdata%d' % txt).data == "":
+                                    if params["param_default"] and str(getattr(form, 'textdata%d' % txt).raw_data[0]).lower() == params["param_default"].lower() :#Don't want to send blank data:
+                                        pass
+                                    else:
+                                        function_parameters[params['param_name']] = str(getattr(form, 'textdata%d'%txt).raw_data[0])
                                 txt += 1
 
                             elif params['param_type'] == 'bool':
-                                function_parameters[params['param_name']] = getattr(form, 'true_false%d'%t_f).data
+                                if not getattr(form, 'true_false%d'%t_f).data == params["param_default"] :#Don't want to send blank data:
+                                    function_parameters[params['param_name']] = getattr(form, 'true_false%d'%t_f).data
                                 t_f += 1
                         url = '/%s/%s/results' % (topic, functions["function_name"])
                         return redirect(url)
@@ -115,6 +134,7 @@ def function(topic, function):
 @app.route('/<topic>/<function>/results/')
 def results(topic, function):
     sections = get_section(topic)
+    print function_parameters
     if handyrep_address is None or username is None or password is None:
         return redirect(url_for("address", next=request.url))
     else:

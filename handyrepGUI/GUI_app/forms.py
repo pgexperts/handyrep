@@ -16,3 +16,5 @@ class FunctionForm(Form):
     true_false1 = BooleanField('true_false1', default = False)
     true_false2 = BooleanField('true_false2', default = False)
     true_false3 = BooleanField('true_false3', default = False)
+
+
