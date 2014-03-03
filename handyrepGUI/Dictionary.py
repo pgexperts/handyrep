@@ -181,7 +181,7 @@ Action = [
         {'param_name': 'reclone', 'param_default': False, 'param_description': 'Whether to clone over an existing replica, if any. '
                 'If set to False (the default), clone will abort if this server has an operational PostgreSQL on it.', 'param_type': 'bool',
         'required': False, 'param_options': None},
-        {'param_name': 'clonefrom', 'param_description': 'The server to clone from. Defaults to the current master.', 'param_type': 'text',
+        {'param_name': 'clonefrom','param_default': 'current master', 'param_description': 'The server to clone from. Defaults to the current master.', 'param_type': 'text',
         'required': False, 'param_options': None}],
      'result_format': ''},
     {'function_name': 'enable', 'description': 'Enable a server definition already created. Also verifies the server defintion.',
