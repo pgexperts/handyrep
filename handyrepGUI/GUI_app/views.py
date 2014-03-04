@@ -1,5 +1,5 @@
 __author__ = 'kaceymiriholston'
-from flask import render_template, redirect, url_for, request, abort
+from flask import render_template, redirect, url_for, request, abort, make_response
 
 import requests
 
@@ -29,11 +29,30 @@ def get_section(section_name):
         section = None
     return section
 
+def user_status():
+    if handyrep_address is None or username is None or password is None:
+        #return dict(status="login", link='/get_address/', topics=topic_list)
+        return "login", "/get_address/"
+    else:
+        return "logout", '/logout/'
+        #return dict(status="logout", link='request.url')
+
+@app.route('/logout/')
+def logout():
+    global handyrep_address
+    handyrep_address = None
+    global username
+    username = None
+    global password
+    password = None
+    return redirect('/index')
+
 
 @app.route('/')
 @app.route('/index/')
 def index():
-    return render_template("base.html", topics=topic_list)
+    (status, link) = user_status()
+    return render_template("base.html", topics=topic_list, status=status, link=link )
 
 
 @app.route('/get_address/', methods=['GET', 'POST'])
@@ -51,14 +70,20 @@ def address():
             r = requests.get(url_to_send, auth=(username, password))
         except:
             message = "There is something wrong with the address, please try again."
-            return render_template('get_address.html', form=form, message=message)
+            handyrep_address = None
+            username = None
+            password = None
+            (status, link) = user_status()
+            return render_template('get_address.html', form=form, message=message, status=status, link=link)
         if r.status_code in range(400, 500):
             if r.status_code == 404:
                 return redirect(url_for("page_not_found"))
             message = "Please check username and password"
-            return render_template('get_address.html', form=form, message=message)
+            (status, link) = user_status()
+            return render_template('get_address.html', form=form, message=message, status=status, link=link)
         return redirect(request.args.get('next') or '/index')
-    return render_template('get_address.html', form=form)
+    (status, link) = user_status()
+    return render_template('get_address.html', form=form, status=status, link=link)
 
 
 @app.route('/<topic>/')
@@ -66,7 +91,8 @@ def information(topic):
     sections = get_section(topic)
     if sections is None:
         abort(404)
-    return render_template("Section.html", topics=topic_list, topic=topic, Sections=sections)
+    (status, link) = user_status()
+    return render_template("Section.html", topics=topic_list, topic=topic, Sections=sections, status=status, link=link)
 
 
 @app.route('/<topic>/<function>/', methods=['GET', 'POST'])
@@ -109,8 +135,9 @@ def function(topic, function):
                             if params['param_type'] == 'text' or params['param_type'] == 'choice':
                                 if params["required"] and getattr(form, 'textdata%d' % txt).data == "":
                                     message = "Please enter the required field."
+                                    (status, link) = user_status()
                                     return render_template("function_detail.html", topics=topic_list, Sections=sections,
-                                                           topic=topic, function=functions, form=form, message=message)
+                                                           topic=topic, function=functions, form=form, message=message, status=status, link=link)
                                 print getattr(form, 'textdata%d' % txt).data
                                 if not getattr(form, 'textdata%d' % txt).data == "":
                                     if params["param_default"] and str(getattr(form, 'textdata%d' % txt).raw_data[0]).lower() == params["param_default"].lower() :#Don't want to send blank data:
@@ -125,8 +152,9 @@ def function(topic, function):
                                 t_f += 1
                         url = '/%s/%s/results' % (topic, functions["function_name"])
                         return redirect(url)
+                    (status, link) = user_status()
                     return render_template("function_detail.html", topics=topic_list, Sections=sections,
-                                           topic=topic, function=functions, form=form)
+                                           topic=topic, function=functions, form=form, status=status, link=link)
 
         abort(404)
 
@@ -149,10 +177,12 @@ def results(topic, function):
                     print x.status_code
                     print x.text
                     result_to_send = "Parameters were not entered correctly. Please renter them. Remember, handyrep is case sensitive."
-                    return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send)
+                    (status, link) = user_status()
+                    return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send, status=status, link=link)
                 result_to_send = x.json()
                 print x.text
-                return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send)
+                (status, link) = user_status()
+                return render_template("results.html", topics=topic_list, Sections=sections, topic=topic, function=functions, result_to_send=result_to_send, status=status, link=link)
         abort(404)
 
 
