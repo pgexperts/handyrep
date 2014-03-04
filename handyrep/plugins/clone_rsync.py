@@ -83,7 +83,7 @@ class clone_rsync(HandyRepPlugin):
             else:
                 sshloc = "ssh"
                 
-            sshopt = """ -e "%s -o Compression=no -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" """ % sshloc
+            sshopt = """ -e "%s -o Compression=no -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -c arcfour" """ % sshloc
 
         mastdata = "%s:%s" % (self.servers[clonefrom]["hostname"], self.servers[clonefrom]["pgdata"],)
         repdata = self.servers[servername]["pgdata"]

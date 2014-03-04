@@ -21,6 +21,7 @@ class multi_pgbouncer(HandyRepPlugin):
             master = self.get_master_name()
         blist = self.bouncer_list()
         faillist = []
+        disablelist = []
         for bserv in blist:
             bpush = self.push_config(bserv, master)
             if self.failed(bpush):
@@ -28,10 +29,17 @@ class multi_pgbouncer(HandyRepPlugin):
                 # bad bouncer, better disable it at BigIP
                 if failed(self.disable_bouncer(bserv)):
                     faillist.append(bserv)
+                else:
+                    disablelist.append(bserv)
 
         if faillist:
             # report failure if we couldn't reconfigure any of the servers
-            return self.rd(False, "some pgbouncer servers did not change their configuration at failover: %s" % ','.join(faillist))
+            return self.rd(False, "some pgbouncer servers did not change their configuration at failover, and could not be removed from bigip: %s" % ','.join(faillist))
+        elif disablelist:
+            if ( len(disablelist) + len(faillist) ) == len(blist):
+                return self.rd(False, "all pgbouncers not responding and disabled")
+            else:
+                return self.rd(True, "some pgbouncers failed over, but others had to be disabled in BigIP: %s" % ','.join(disablelist))
         else:
             return self.rd(True, "pgbouncer failover successful")
 
@@ -228,9 +236,13 @@ class multi_pgbouncer(HandyRepPlugin):
         myconf = self.conf["plugins"]["multi_pgbouncer_bigip"]
         disablecmd = "%s modify ltm node %s state user-down" % (myconf["tmsh_path"], self.servers[bouncername]["ip_address"],)
         bigserv = self.get_bigip()
-        disableit = self.sudorun(bouncername,bigserv, [disablecmd,], myconf["bigip_user"])
-        if self.succeeded(disableit):
-            return self.rd(True, "bouncer %s disabled" % bouncername)
+        sshpasswd = self.get_conf("passwords","bigip_password")
+        if bigserv:
+            disableit = self.sudorun(bouncername,bigserv, [disablecmd,], myconf["bigip_user"], sshpass=sshpasswd)
+            if self.succeeded(disableit):
+                return self.rd(True, "bouncer %s disabled" % bouncername)
+            else:
+                return self.rd(False, "bouncer %s could not be disabled" % bouncername)
         else:
-            return self.rd(False, "bouncer %s could not be disabled" % bouncername)
+            return self.rd(False, "bouncer %s could not be disabled because bigip is not configured" % bouncername)
     

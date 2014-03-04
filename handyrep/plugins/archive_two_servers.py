@@ -35,16 +35,18 @@ class archive_two_servers(HandyRepPlugin):
 
         # if that worked, let's make sure the rest of the setup is complete
         # make archive directory
-        if not file_exists(otherserv, myconf["archive_directory"]):
+        if not self.file_exists(otherserv, myconf["archive_directory"]):
             createcmd = "mkdir %s" % myconf["archive_directory"]
             self.run_as_postgres(otherserv, [createcmd,])
+
+        return self.rd(True, "archive script pushed")
 
     def recoveryline(self):
         # returns archive recovery line for recovery.conf
         myconf = self.get_myconf()
         restcmd = """restore_command = 'cp %s""" % myconf["archive_directory"]
         restcmd += "/%f %p'\n\n"
-        restcmd += "archive_cleanup_command = '%s %s" % (myconf["archive_directory"], myconf["archivecleanup_path"],) + " %r'\n"
+        restcmd += "archive_cleanup_command = '%s %s" % (myconf["archivecleanup_path"], myconf["archive_directory"],) + " %r'\n"
         return restcmd
 
     def poll(self):

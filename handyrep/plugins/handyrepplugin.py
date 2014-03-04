@@ -22,12 +22,15 @@ class HandyRepPlugin(object):
         self.servers = servers
         return
 
-    def sudorun(self, servername, commands, runas, passwd=""):
+    def sudorun(self, servername, commands, runas, passwd="", sshpass=None):
         # generic function to run one or more commands
         # as a specific remote user.  returns the results
         # of the last command run.  aborts when any
         # command fails
-        env.key_filename = self.servers[servername]["ssh_key"]
+        if sshpass:
+            env.password = sshpass
+        else:
+            env.key_filename = self.servers[servername]["ssh_key"]
         env.user = self.servers[servername]["ssh_user"]
         env.disable_known_hosts = True
         env.host_string = self.servers[servername]["hostname"]

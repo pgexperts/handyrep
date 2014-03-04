@@ -237,7 +237,7 @@ class HandyRep(object):
         # check plugin method to see
         hrs_method = self.get_plugin(self.conf["handyrep"]["master_check_method"])
         # return result
-        hrstatus = hrs_method.run(*self.conf["handyrep"]["master_check_parameters"])
+        hrstatus = hrs_method.run(self.conf["handyrep"]["master_check_parameters"])
         return hrstatus
 
     def verify_servers(self):

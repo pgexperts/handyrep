@@ -449,14 +449,16 @@ Parameters the same as multi_pgbouncer.
 
 Same as multi_pgbouncer, plus:
 
-bigip_hostname
-    hostname of the bigip server
-    
 bigip_user
-    sudo username of the bigip administrator
+    sudo username for tmsh commands
 
 tmsh_path
     full path to the tmsh executable
+
+Also, add this to the passwords section:
+
+bigip_password
+    ssh password for the bigip server login, if required
 
 Additionally, each pgbouncer server definition must include an ip_address field which is the bouncer's ip_address as seen by BigIP.  Also, one server must be created with the role "bigip".
 

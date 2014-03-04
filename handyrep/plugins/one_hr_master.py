@@ -6,8 +6,8 @@ from plugins.handyrepplugin import HandyRepPlugin
 
 class one_hr_master(HandyRepPlugin):
 
-    def run(self):
+    def run(self, params=None):
         return self.rd( True, "only one HR server", {"is_master" : True} )
 
-    def test(self):
+    def test(self, params=None):
         return self.rd( True, "", {"is_master" : True} )
