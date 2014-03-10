@@ -512,3 +512,15 @@ Changes PostgreSQL's operation by calling the "service" utility on the target se
 
 The Plugin API and Writing Your Own
 ===================================
+
+One of the core tenets of HandyRep is the ability to write your own plugins so that you can integrate HandyRep with whatever other software you already have in your infrastructure.  Here's the basic rules:
+
+* all plugins go in the plugins/ directory/module
+* all plugins extend the handyrepplugin template class
+* every plugin consists of a module and a class which has the same name as the module
+* all plugins implement the run() and test() functions.  Some may need to implement additional functions, according to plugin type.
+
+
+
+
+

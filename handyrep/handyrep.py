@@ -10,7 +10,7 @@ import logging
 import time
 import importlib
 from plugins.failplugin import failplugin
-from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr, get_nested_val
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr, get_nested_val, notnone, notfalse
 import psycopg2
 import psycopg2.extensions
 import os
@@ -388,10 +388,18 @@ class HandyRep(object):
         # don't bother to return anything in particular
         # we don't check it
         return
+ 
+    def reload_conf(self, config_file=None):
 
-    def reload_conf(self, config_file='handyrep.conf'):
-        config = ReadConfig(config_file)
-        self.conf = config.read('config/handyrep-validate.conf')
+        newconf = notfalse(config_file, self.conf["handyrep"]["config_file"], "handyrep.conf")
+            
+        validconf = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config/handyrep-validate.conf')
+        try:
+            config = ReadConfig(newconf)
+            self.conf = config.read(validconf)
+        except:
+            return return_dict(False, 'configuration file could not be loaded, see logs')
+        
         return return_dict(True, 'configuration file reloaded')
 
     def write_servers(self):
@@ -505,20 +513,21 @@ class HandyRep(object):
         # to fail over, as verify_all does
         master_count = 0
         rep_count = 0
-        ret = return_dict(False, "no servers to poll", {"failover_ok" : False})
+        ret = return_dict(False, "no servers to poll", {"failover_ok" : False })
+        ret["servers"] = {}
         for servname, servdeets in self.servers.iteritems():
             if servdeets["enabled"]:
                 if servdeets["role"] == "master":
                     master_count += 1
                     pollrep = self.poll_master()
-                    ret.update(pollrep)
-                    ret[servname] = pollrep
+                    ret.["servers"].update(pollrep)
+                    ret["servers"][servname] = pollrep
                 elif servdeets["role"] == "replica":
                     pollrep = self.poll_server(servname)
                     if succeeded(pollrep):
                         rep_count += 1
                         ret["failover_ok"] = True
-                    ret[servname] = pollrep
+                    ret["servers"][servname] = pollrep
                 # other types of servers are ignored
 
         # check master count
@@ -715,6 +724,7 @@ class HandyRep(object):
         # also returns failover_ok, which tells us
         # if there's an OK failover situation
         vertest = return_dict(False, "no master found")
+        vertest["servers"] = {}
         master_count = 0
         rep_count = 0
 
@@ -726,21 +736,21 @@ class HandyRep(object):
         if succeeded(mcheck):
             vertest.update({ "result" : "SUCCESS",
                 "details" : "master check passed",
-                "failover_ok" : True,
-                mserver : mcheck })
+                "failover_ok" : True })
+            vertest["servers"][mserver] = mcheck
         else:
             vertest.update({ "result" : "FAIL",
                 "details" : "master check failed",
-                "failover_ok" : True,
-                mserver : mcheck })
+                "failover_ok" : True })
+            vertest["servers"][mserver] = mcheck
         
         for server, servdetail in self.servers.iteritems():
             if servdetail["enabled"]:
                 if servdetail["role"] == "master":
                     master_count += 1
                 elif servdetail["role"] == "replica":
-                    vertest[server] = self.verify_replica(server)
-                    if succeeded(vertest[server]):
+                    vertest["servers"][server] = self.verify_replica(server)
+                    if succeeded(vertest["server"][server]):
                         rep_count += 1
 
         # check masters

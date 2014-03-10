@@ -11,7 +11,7 @@
 
 from plugins.handyrepplugin import HandyRepPlugin
 
-class multi_pgbouncer(HandyRepPlugin):
+class multi_pgbouncer_bigip(HandyRepPlugin):
 
     def run(self, newmaster=None):
         # used for failover of all pgbouncer servers
@@ -184,7 +184,7 @@ class multi_pgbouncer(HandyRepPlugin):
         # creates the list of database aliases and target
         # servers for pgbouncer
         # build master string first
-        myconf = self.conf["plugins"]["multi_pgbouncer"]
+        myconf = self.get_myconf()
         dblist = myconf["database_list"]
         # add in the handyrep db if the user has forgotten it
         if self.conf["handyrep"]["handyrep_db"] not in dblist:

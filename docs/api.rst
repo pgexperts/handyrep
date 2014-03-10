@@ -540,12 +540,12 @@ Reload handyrep configuration from the handyrep.conf file.  Allows changing of c
         config_file FilePath default 'handyrep.conf'
 
 config_file
-    File path location of the configuration file.  Defaults to 'handyrep.conf' in
-    the working directory.
+    File path location of the configuration file.  Defaults to the
+    previous config location, or to 'handyrep.conf' in the working directory if there is no prior location.
 
 Returns RD
 
-Note: this does not cause a change to server configuration unless
+Note: this does not cause a change to servers configuration unless
 "override_server_file" is set to True in the new configuration
 file itself.
 
@@ -811,27 +811,6 @@ Returns RD with extra fields:
 
 definition
     the resulting new definition for the server
-    
-
-cleanup_archive
----------------
-
-Delete old WALs from a shared WAL archive, according to the
-expiration settings in handyrep.conf.  Uses the configured
-archive deletion plugin.
-
-::
-
-    cleanup_archive
-
-Returns RD:
-
-SUCCESS
-    archives deleted, or archiving is disabled so no action taken.
-
-FAIL
-    archives could not be deleted, possibly because of a permissions
-    or configuration issue.
 
 connection_proxy_init
 ---------------------
@@ -852,12 +831,67 @@ SUCCESS
 FAIL
     error in pushing new configuration, or proxy does not support
     initialization
+    
 
+cleanup_archive
+---------------
 
+Delete old WALs from a shared WAL archive, according to the
+expiration settings in handyrep.conf.  Uses the configured
+archive deletion plugin, if any.
 
+::
 
+    cleanup_archive
 
+Returns RD:
 
+SUCCESS
+    archives deleted, or archiving is disabled so no action taken.
 
+FAIL
+    archives could not be deleted, possibly because of a permissions
+    or configuration issue.
+
+Note: generally this method would be called by a cron job.
+
+start_archiving
+---------------
+
+Start archiving on the master.
+
+::
+
+    start_archving
+
+Returns RD:
+
+SUCCESS
+    archiving should be enabled
+
+FAIL
+    either archving is not configured, or was unable to modify the master.
+
+This call will push an archive.sh script and remove any noarchiving file, if defined and present (all of this is via plugin methods).  It does not set archiving=on in postgresql.conf, so if archiving has not begun after running this, that's the first thing to check.
+
+stop_archiving
+--------------
+
+Stops copying of WAL files on the master.
+
+::
+
+    stop_archving
+
+Returns RD:
+
+SUCCESS
+    noarchving flag is set, or archiving is otherwise disabled
+
+FAIL
+    could not disable archiving, either because it is not configured, or because
+    there's something wrong with the master.
+
+Implemented via the archving plugin.  Most archving plugins implement this via a noarchving touch file.  This does mean that if the master's disk is 100% full, it will not work.
 
 

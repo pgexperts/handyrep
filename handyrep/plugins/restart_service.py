@@ -35,7 +35,7 @@ class restart_service(HandyRepPlugin):
     def get_service_cmd(self, servername, runmode):
         myconf = self.get_myconf()
         if myconf["service_name"]:
-            return "service %s %s" % (servicename, runmode,)
+            return "service %s %s" % (myconf["service_name"], runmode,)
         else:
             return "service postgresql %s" % (runmode,)
 
