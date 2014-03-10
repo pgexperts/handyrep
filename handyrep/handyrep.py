@@ -1065,18 +1065,18 @@ class HandyRep(object):
                         # we don't fail back if they fail, though
                         if failed(self.extra_failover_commands(newmaster)):
                             self.cluster_status_update("warning","postfailover commands failed")
-                            return(True, "Failed over, but postfailover scripts did not succeed")
+                            return return_dict(True, "Failed over, but postfailover scripts did not succeed")
                         else:
                             self.log("FAILOVER","Failover to %s completed" % newmaster)
                             self.servers[oldmaster]["enabled"] = False
                             self.status = self.clusterstatus()
-                            return(True, "Failover completed")
+                            return return_dict(True, "Failover completed")
                     else:
                         # augh.  promotion succeeded but we can't fail over
                         # the connections.  abort
                         self.log("FAILOVER","Promoted new master but unable to fail over connections", True, "CRITICAL")
                         self.cluster_status_update("down","Promoted new master but unable to fail over connections")
-                        return (False, "Failed over master but unable to fail over connections")
+                        return return_dict(False, "Failed over master but unable to fail over connections")
 
         # if we've gotten to this point, then we've failed at promoting
         # any replicas -- reset an abort
