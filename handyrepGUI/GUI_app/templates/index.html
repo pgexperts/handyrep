@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+    <hr/>
+    {% for category in status %}
+        {% if category == "cluster" %}
+            <div style="text-align: center;" >
+                <div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block;max-width: 45%">
+                    <h1 style="color: #231f20; text-align: center; padding-right: 1.5em; padding-left: 1.5em">Cluster Status Information</h1>
+            </div></div>
+            <div style="padding-left: 3em; padding-right: 3em">
+
+                <h3> <a href="/cluster">Cluster</a> status is {{ status.get(category).get("status") }} because {{ status.get(category).get("status_message") }}.
+                    This was reported at {{ status.get(category).get("status_ts") }}</h3>
+
+            </div>
+            <hr/>
+
+        {% elif category == "servers" %}
+            <div style="text-align: center;" >
+                <div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block;max-width: 45%">
+                    <h1 style="color: #231f20; text-align: center; padding-right: 1.5em; padding-left: 1.5em">Servers Status Information</h1>
+            </div></div>
+            <div style="padding-left: 3em; padding-right: 3em">
+                <div id="global_nav">
+                    {% for key, value in status.get(category)|dictsort %}
+                        <h2><a href="/server/{{ key }}"> {{ key|upper }}</a> </h2>
+                        <div style="padding-left: 2em">
+                        <h3>{{value.get("hostname")|capitalize}} is a {{value.get("role")}} server and is
+                            {% if value.get("enabled") == False%}
+                                not
+                            {% endif %}
+                            enabled. <br/><span style="padding-left: 2em">It's status is {{ value.get("status") }} due to {{ value.get("status_message") }}.
+                        This is accurate as of {{ value.get("status_ts") }}</span></h3>
+                        </div>
+                    {% endfor %}
+            </div></div>
+        {% endif %}
+    {% endfor %}
+{% endblock %}

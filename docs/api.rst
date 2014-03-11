@@ -660,7 +660,7 @@ SUCCESS
 
 FAIL
     unable to fail over to the new master. Cluster may have been left in
-    and indeterminate state.  check details.
+    an indeterminate state.  check details.
 
 clone
 -----

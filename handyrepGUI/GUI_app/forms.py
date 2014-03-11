@@ -10,11 +10,15 @@ class AddressForm(Form):
     password = TextField('password', validators = [Required()])
 
 class FunctionForm(Form):
-    textdata1 = TextField('textdata1')
-    textdata2 = TextField('textdata1')
-    textdata3 = TextField('textdata1')
-    true_false1 = BooleanField('true_false1', default = False)
-    true_false2 = BooleanField('true_false2', default = False)
-    true_false3 = BooleanField('true_false3', default = False)
+    textdata = TextField('textdata')
+    true_false = BooleanField(default = False)
+
+class ClusterForm(Form):
+    textdata1 = TextField('textdata')
+    textdata2 = TextField('textdata')
+    true_false = BooleanField(default=False)
+
+
+
 
 

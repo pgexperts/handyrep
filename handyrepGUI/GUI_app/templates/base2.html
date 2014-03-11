@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+    <div style="padding-left: 4em;padding-right: 4em">
+    <table style="text-align:left;width: 100%;font-size: 1em">
+        <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Status Message</th>
+            <th>Status Timestamp</th>
+            <th>Role</th>
+            <th>Enabled</th>
+        </tr>
+        <tr>
+            <td><a href="/cluster"> <p>cluster</p></a></td>
+            <td><p>{{ status.cluster.get("status") }}</p></td>
+            <td><p>{{ status.cluster.get("status_message") }}</p></td>
+            <td><p>{{ status.cluster.get("status_ts") }}</p></td>
+            <td><p>-</td>
+            <td><p>-</td>
+        </tr>
+         {% for key, value in status.get("servers")|dictsort %}
+        <tr>
+            <td><a href="/server/{{ key }}"><p>{{key}}</p></a></td>
+            <td><p>{{value.get("status")}}</p></td>
+            <td><p>{{value.get("status_message")}}</p></td>
+            <td><p>{{value.get("status_ts")}}</p></td>
+            <td><p>{{value.get("role")}}</p></td>
+            <td><p>{{value.get("enabled")}}</p></td>
+        </tr>
+        {% endfor %}
+    </table>
+    </div>
+    {% block eachcontent %}{% endblock %}
+{% endblock %}
