@@ -91,7 +91,6 @@ def server_actions(server_name):
     else:
         functions = Dictionary.other
     final_functions = functions.get(server_info.get(server_name)["enabled"])
-
     return render_template("server_page.html", status=status, info=server_info, functions=final_functions)
 
 @app.route('/cluster')

@@ -253,7 +253,7 @@ Functions = {
 }
 
 master = {True:("get_server_info", "poll", "verify_server", "alter_server_def", "disable", "restart", "shutdown"), False:("get_server_info", "alter_server_def", "enable", "clone", "remove")}
-replica = {True:("get_server_info", "poll", "verify_server", "alter_server_def", "disable", "restart", "shutdown", "manual_failover", "promote"), False:("get_server_info", "alter_server_def", "enable", "clone", "remove")}
+replica = {True:("get_server_info", "poll", "verify_server", "alter_server_def", "disable", "restart", "shutdown", "manual_failover", "promote", "clone"), False:("get_server_info", "alter_server_def", "enable", "clone", "remove")}
 other = {True:("get_server_info", "alter_server_def", "disable"), False:("get_server_info", "alter_server_def", "enable", "remove")}
 cluster_functions = ("get_status", "get_cluster_status", "get_master_name", "read_log", "get_setting", "set_verbose",
 "verify_all", "poll_all", "init_handyrep_db", "add_server", "connection_proxy_init", "cleanup_archive", "start_archiving",
