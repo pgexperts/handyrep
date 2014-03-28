@@ -37,6 +37,60 @@ successplugin
 
 Generic "success" plugin.  Always returns SUCCESS when called.  Implements "run" and "test" only.
 
+Authentication Plugins
+----------------------
+
+These plugins govern how users of handyrep itself, both the API and the GUI, are authenticated.  If you're using handyrep as a library, you can safely ignore them, as you need to do your own authentication then.
+
+zero_auth
+~~~~~~~~~
+
+Use this plugin if you don't want to authenticate users of handyrep at all.
+
+**Parameters**
+
+username
+    authentication username; ignored
+
+userpass
+    authentication password; ignored
+
+funcname
+    called API function name, ignored
+
+**No configuration***
+
+
+simple_password_auth
+~~~~~~~~~~~~~~~~~~~~
+
+This authentication plugin makes use of an admin and a read-only password, set in the config file, to authenticate everything.
+
+**Parameters**
+
+username
+    authentication username; ignored
+
+userpass
+    authentication password
+
+funcname
+    called API function name
+
+**Configuration**
+
+ro_function_list
+    list of API function names which are considered "read-only" and
+    thus safe for users with just the read-only password
+
+Also requires that the admin_password and read_password parameters in handyrep.conf be set.
+
+ldap_auth
+~~~~~~~~~
+
+Authenticates users against an LDAP database.
+
+
 HandyRep Availability Plugins
 -----------------------------
 

@@ -1470,7 +1470,7 @@ class HandyRep(object):
             issues.update({ "ssh" : "FAIL" })
         # check postgres connection
         try:
-            tconn = self.adhoc_connection(dbhost=newdict["hostname"],dbport=newdict["port"],dbpass=newdict["pgpass"])
+            tconn = self.adhoc_connection(dbhost=newdict["hostname"],dbport=newdict["port"],dbpass=newdict["pgpass"],dbname=self.conf["handyrep"]["handyrep_db"])
         except Exception as e:
             issues.update({ "psql" : "FAIL" })
         else:
@@ -1841,20 +1841,9 @@ class HandyRep(object):
         # set in handyrep.conf
         # should probably be replaced with something more sophisticated
         # you'll notice we ignore the username, for example
-        
-        # is this a readonly function?
-        rofunclist = ["get_status","get_server_info","get_cluster_status","get_servers_by_role",]
-
-        # try admin password
-        if userpass == self.conf["passwords"]["admin_password"]:
-            return return_dict(True, "password accepted")
-        elif userpass == self.conf["passwords"]["read_password"]:
-            if funcname in rofunclist:
-                return return_dict(True, "password accepted")
-            else:
-                return return_dict(False, "That feature requires admin access")
-        else:
-            return return_dict(False, "password rejected")
+        authit = self.get_plugin(self.conf["handyrep"]["authentication_method"])
+        authed = authit.run(username, userpass, funcname)
+        return authed
 
     def authenticate_bool(self, username, userpass, funcname):
         # simple boolean response to the above for the web daemon
