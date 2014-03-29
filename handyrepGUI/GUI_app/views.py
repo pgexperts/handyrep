@@ -90,7 +90,7 @@ def server_actions(server_name):
         functions = getattr(Dictionary, server_info.get(server_name)["role"])
     else:
         functions = Dictionary.other
-    final_functions = functions.get(server_info.get(server_name)["enabled"])
+    final_functions = sorted(functions.get(server_info.get(server_name)["enabled"]))
     return render_template("server_page.html", status=status, info=server_info, functions=final_functions)
 
 @app.route('/cluster')
@@ -101,7 +101,7 @@ def cluster_actions():
     status = get_status()
     #server information
     server_info = None
-    final_functions = Dictionary.cluster_functions
+    final_functions = sorted(Dictionary.cluster_functions)
     return render_template("server_page.html", status=status, info=server_info, functions=final_functions)
 
 @app.route('/server/<server_name>/<function>', methods=['GET', 'POST'])
