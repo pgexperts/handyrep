@@ -14,6 +14,7 @@ from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, 
 import psycopg2
 import psycopg2.extensions
 import os
+import sys
 
 class HandyRep(object):
 
@@ -25,8 +26,17 @@ class HandyRep(object):
         validconf = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config/handyrep-validate.conf')
         self.conf = config.read(validconf)
         self.conf["handyrep"]["config_file"] = config_file
+
+        opts = {
+         'datefmt': "%Y-%m-%d %H:%M:%S",
+         'format':  "%(asctime)-12s %(message)s",
+        }
+        if self.conf["handyrep"]["config_file"] == 'stdout':
+          opts['stream'] = sys.stdout
+        else:
+          opts['filename'] = self.conf["handyrep"]["log_file"]
         try:
-            logging.basicConfig(filename=self.conf["handyrep"]["log_file"], datefmt="%Y-%m-%d %H:%M:%S", format="%(asctime)-12s %(message)s")
+            logging.basicConfig(**opts)
         except Exception as ex:
             raise CustomError("STARTUP","unable to open designated log file: %s" % exstr(ex))
         self.servers = {}
