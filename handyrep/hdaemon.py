@@ -2,6 +2,7 @@ import inspect
 from threading import Thread
 import time
 import json
+import sys
 
 from flask import Flask, request, jsonify, Response
 
@@ -14,6 +15,10 @@ from daemon.auth import authenticate, REALM
 
 #
 
+# Cute hack:
+# Since there's no STDOUT.sync = true in Python,
+# Make stdout unbuffered by redirecting stdout to stderr :-)
+sys.stdout = sys.stderr
 app = Flask(__name__)
 
 #
