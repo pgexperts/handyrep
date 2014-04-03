@@ -1386,7 +1386,7 @@ class HandyRep(object):
 
         servall = {}
         for servname, servdeets in self.servers.iteritems():
-            servin = {k:v for k,v in servdeets.iteritems() if k in ["hostname","status","status_no","status_message","enabled","status_ts", "role"]}
+            servin = dict((k,v) for k,v in servdeets.iteritems() if k in ["hostname","status","status_no","status_message","enabled","status_ts", "role"])
             servall[servname] = servin
 
         return { "cluster" : self.status,
@@ -1423,7 +1423,7 @@ class HandyRep(object):
         # return master if master
         if serverrole == "master":
             master =self.get_master_name()
-            mastdeets = { master, self.servers[master] }
+            mastdeets = { 'master': self.servers[master] }
             return mastdeets
         else:
             # if replicas, return all running replicas
