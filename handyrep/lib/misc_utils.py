@@ -54,7 +54,7 @@ def get_nested_val(mydict, *args):
     return newdict
 
 # returns the first non-None in a list
-def notnone(*args)
+def notnone(*args):
     for arg in args:
         if arg is not None:
             return arg
@@ -62,7 +62,7 @@ def notnone(*args)
     return None
 
 # returns the first populated value in a list
-def notfalse(*args)
+def notfalse(*args):
     for arg in args:
         if arg:
             return arg

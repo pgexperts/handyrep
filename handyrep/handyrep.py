@@ -520,7 +520,7 @@ class HandyRep(object):
                 if servdeets["role"] == "master":
                     master_count += 1
                     pollrep = self.poll_master()
-                    ret.["servers"].update(pollrep)
+                    ret["servers"].update(pollrep)
                     ret["servers"][servname] = pollrep
                 elif servdeets["role"] == "replica":
                     pollrep = self.poll_server(servname)
@@ -750,7 +750,7 @@ class HandyRep(object):
                     master_count += 1
                 elif servdetail["role"] == "replica":
                     vertest["servers"][server] = self.verify_replica(server)
-                    if succeeded(vertest["server"][server]):
+                    if succeeded(vertest["servers"][server]):
                         rep_count += 1
 
         # check masters
