@@ -444,13 +444,13 @@ None
 **Configuration**
 
 max_replay_lag
-    maximum replay lag for a replica to be considered for failover.  In whatever units the replica status plugin outputs.
+    maximum replay lag for a replica to be considered for failover, in megabytes
 
 **Extra Return Values**
 
 Instead of an RD, returns a sorted list of replica server names.  If no replicas can be found, returns an empty list.
 
-Returns all replicas with a status of "healthy" or "lagged" status, sorted by receive location for the replication stream.  Replicas whose replay location is further behind than max_replay_lag are filtered out. "Unknown" replicas (ones which have been added but not verified) are also filtered out.
+Returns all replicas with a status of "healthy" or "lagged" status, sorted by receive location for the replication stream and then by whether they are lagged or not.  "Unknown" replicas (ones which have been added but not verified) are also filtered out.
 
 Connection Proxy Plugins
 ------------------------
