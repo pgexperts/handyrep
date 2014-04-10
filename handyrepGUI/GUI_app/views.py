@@ -24,7 +24,7 @@ def get_status():
 
 def get_server_info(server_name):
     params = {"servername": str(server_name)}
-    url_to_send = "{address}get_server_info".format(address=handyrep_address)
+    url_to_send = "{address}/get_server_info".format(address=handyrep_address)
     request= requests.get(url_to_send,params=params, auth=(username,password))
     return request.json()
 
