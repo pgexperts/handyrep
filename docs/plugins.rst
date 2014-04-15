@@ -70,7 +70,7 @@ This authentication plugin makes use of an admin and a read-only password, set i
 
 username
     authentication username; ignored
-
+    
 userpass
     authentication password
 
@@ -89,6 +89,49 @@ ldap_auth
 ~~~~~~~~~
 
 Authenticates users against an LDAP database.
+
+**Parameters**
+
+username
+    authentication username
+
+userpass
+    authentication password
+
+funcname
+    called API function name; ignored
+
+**Configuration**
+
+uri
+    uri of the LDAP/AD server
+
+bind_dn
+    bind DN for the user dictionary lookup
+    
+bind_password
+    lookup password for the user dictionary
+    
+base_dn
+    base DN for actual authentication
+    
+hr_group
+    LDAP group with administrative rights on HandyRep
+    
+log_auth
+    Log most authentication attempts for auditing purposes
+
+debug_auth
+    Show a detailed error message for failed authentications.
+
+**Requirements**
+
+ldap module
+
+This LDAP auth module was tested against a Microsoft AD installation, so
+it may need adjustment for other kinds of LDAP.  Presumes that all legit HandyRep admins belong to the same LDAP group.  Requires the storage of
+a user dictionary password in plain text, so make sure that password carries
+no other rights.
 
 
 HandyRep Availability Plugins
