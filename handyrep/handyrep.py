@@ -14,6 +14,7 @@ from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, 
 import psycopg2
 import psycopg2.extensions
 import os
+import sys
 
 class HandyRep(object):
 
@@ -25,8 +26,17 @@ class HandyRep(object):
         validconf = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config/handyrep-validate.conf')
         self.conf = config.read(validconf)
         self.conf["handyrep"]["config_file"] = config_file
+
+        opts = {
+         'datefmt': "%Y-%m-%d %H:%M:%S",
+         'format':  "%(asctime)-12s %(message)s",
+        }
+        if self.conf["handyrep"]["config_file"] == 'stdout':
+          opts['stream'] = sys.stdout
+        else:
+          opts['filename'] = self.conf["handyrep"]["log_file"]
         try:
-            logging.basicConfig(filename=self.conf["handyrep"]["log_file"], datefmt="%Y-%m-%d %H:%M:%S", format="%(asctime)-12s %(message)s")
+            logging.basicConfig(**opts)
         except Exception as ex:
             raise CustomError("STARTUP","unable to open designated log file: %s" % exstr(ex))
         self.servers = {}
@@ -1413,7 +1423,7 @@ class HandyRep(object):
 
         servall = {}
         for servname, servdeets in self.servers.iteritems():
-            servin = {k:v for k,v in servdeets.iteritems() if k in ["hostname","status","status_no","status_message","enabled","status_ts", "role"]}
+            servin = dict((k,v) for k,v in servdeets.iteritems() if k in ["hostname","status","status_no","status_message","enabled","status_ts", "role"])
             servall[servname] = servin
 
         return { "cluster" : self.status,
@@ -1450,7 +1460,7 @@ class HandyRep(object):
         # return master if master
         if serverrole == "master":
             master =self.get_master_name()
-            mastdeets = { master, self.servers[master] }
+            mastdeets = { 'master': self.servers[master] }
             return mastdeets
         else:
             # if replicas, return all running replicas
