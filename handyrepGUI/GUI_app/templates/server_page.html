@@ -1,0 +1,43 @@
+{% extends "server_base_page.html" %}
+
+{% block specificdata %}
+{% if info %}
+    {% set server=[] %}
+{% for key in info %}
+    <h2>Functions callable on <a href="/server/{{ key }}"> {{ key |capitalize}}</a>:</h2>
+    {% set _ = server.append(key) %}
+
+{% endfor %}
+
+    <table style="text-align:center;width: 100%">
+    <tr>
+    {% for function in functions %}
+
+    <td><h2 ><a href="/server/{{ server[0] }}/{{ function }}" title="{{ function.description }}">{{ function.short_description }} {{ function }}</a></h2></td>
+
+    {% if loop.index is divisibleby 5 %}
+        </tr></table><table style="text-align:center;width: 100%"><tr>
+
+    {% endif %}
+    {% endfor %}
+    </tr>
+    </table>
+{% else %}
+    <h2>Functions callable on the Cluster:</h2>
+        <table style="text-align:left;width: 100%">
+    <tr>
+    {% for function in functions %}
+
+    <td><h2 ><a href="/cluster/{{ function }}" title="{{ function.description }}">{{ function.short_description }} {{ function }}</a></h2></td>
+
+    {% if loop.index is divisibleby 5 %}
+        </tr><tr>
+
+    {% endif %}
+    {% endfor %}
+    </tr>
+    </table>
+
+{% endif %}
+
+{% endblock %}

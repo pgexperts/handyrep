@@ -1,15 +1,4 @@
 
-#main_words_nav a:link, #main_words_nav a:visited, #main_words_nav a:hover, #main_words_nav a:active{
-    color:#1b75bc; text-decoration: none; font-weight:bold; font-size:1.20em;
-}
-
-#global_nav a:link, #global_nav a:visited{
-    color:#2b3990; font-weight:bold; font-size:1.25em; text-decoration: none;
-}
-
-#global_nav a:hover, #global_nav a:active{
-    color:#231f20; font-weight:bold; font-size:1.25em; text-decoration: none;
-}
 
 .container {
 
@@ -98,6 +87,13 @@ body {
    font-family: Bookman Old School, "Trebuchet MS", Arial, sans-serif;
    font-size: 14px;
    line-height:150%;
+
+}
+body a:link, body a:visited{
+    color:#2b3990; text-decoration: none; font-weight:bold; font-size:1.20em;
+}
+body a:hover, body a:active{
+    color:#231f20; font-weight:bold; font-size:1.20em; text-decoration: none;
 }
 #container {
    min-height:100%;
@@ -111,7 +107,7 @@ body {
    padding-bottom:70px;   /* Height of the footer */
 }
 #footer {
-   position:absolute;
+   position:static;
    bottom:0;
    width:100%;
    height:70px;   /* Height of the footer */

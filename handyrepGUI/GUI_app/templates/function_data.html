@@ -1,0 +1,48 @@
+{% extends "server_base_page.html" %}
+
+{% block specificdata %}
+<hr/>
+    <div style="text-align: center" xmlns="http://www.w3.org/1999/html">
+    <div style="background-color: #f9fbfd; margin: 0% auto; display: inline-block;max-width: 45%">
+
+<h1 style="color: #231f20; text-align: center; padding-left: 1.5em; padding-right: 1.5em">{{ function.function_name }}<br style="; padding-top: 20px"><span style=" font-size: .60em">{{ function.description }}</span>  </h1>
+
+</div></div>
+        <div class = span_20 style="padding-left: 5em; ">
+    <h1 style="color: #231f20; font-size: 1.75em">Please choose your options</h1>
+    <p style="color: red">{{ message }}</p>
+  <form action="" method="post" name = "true_false">
+  {{ form.hidden_tag() }}
+   {% for param in function.params %}
+       {% if not param.param_name == "servername" %}
+            <h2>{{ param.param_name }}<br> <span style="padding-left: 1em; font-size: .8em"> {{ param.param_description }}</span></h2>
+            {% if param.param_default %}
+                <h2 style="color: red; font-size: 1em">If left alone this will default to {{ param.param_default }}</h2>
+            {% endif %}
+            {% if param.param_options %}
+                <h3>Please choose from one of the following.</h3>
+                {% for option in param.param_options %}
+                    <span style="font-weight: bold"> {{ option.option_name }}</span> <br/> <span style="padding-left: 1em">{{ option.description }}<br><br></span>
+                {% endfor %}
+            {% endif %}
+            <span style="padding-left: 1em">
+                {% if param.param_type == "bool"%}
+                    Please click if you want true:
+                    {{ form.true_false }}
+                {% elif param.param_type == "choice" or param.param_type == "text"%}
+                    Please enter your choice:
+                    {{ form.textdata }}
+                {% endif %}
+                {% if param.required %}
+                    <span style="color: red"> (This option is required.)</span>
+                {% endif %}
+            </span>
+       {% endif %}
+   {% endfor %}
+    <br><br>
+  <div style="padding-left: 2em">
+    <input type="submit" value="Submit"></p>
+      </div>
+  </form>
+</div>
+{% endblock %}
