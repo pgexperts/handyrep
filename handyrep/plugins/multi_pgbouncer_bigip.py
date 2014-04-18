@@ -6,6 +6,9 @@
 # requires that each pgbouncer server be in the servers dictionary
 # as role "pgbouncer" and enabled.
 
+# also intended to be run with the latest pgbouncer update which supports
+# include files for pgbouncer, instead of writing directly to pgbouncer.ini
+
 # further, this plugin requires that the handyrep user, DB and password be set
 # up on pgbouncer as a valid connection string.
 
@@ -99,7 +102,7 @@ class multi_pgbouncer_bigip(HandyRepPlugin):
         if self.failed(writeconf):
             return self.rd(False, "could not push new pgbouncer configuration to pgbouncer server")
         # restart pgbouncer
-        restart_command = "%s -u %s -d -R %s" % (myconf["pgbouncerbin"],myconf["owner"],myconf["config_location"],)
+        restart_command = "%s -u %s -d -R %s" % (myconf["pgbouncerbin"],myconf["owner"],myconf["pgbouncer_ini_location"],)
         rsbouncer = self.run_as_root(bouncerserver,[restart_command,])
         if self.succeeded(rsbouncer):
             return self.rd(True, "pgbouncer configuration updated")

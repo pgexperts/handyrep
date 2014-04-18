@@ -47,18 +47,37 @@ class HandyRep(object):
             "status_message" : "status not checked yet",
             "status_ts" : '1970-01-01 00:00:00' }
         self.sync_config(True)
+        self.log_stack = []
         # return a handyrep object
         return None
 
     def log(self, category, message, iserror=False, alert_type=None):
+        logmsg = json.dumps({ "ts" : ts_string(datetime.now())
+            "category" : category,
+            "message" : message,
+            "iserror" : iserror,
+            "alert" : alert_type})
         if iserror:
-            logging.error("%s: %s" % (category, message,))
+            logging.error(logmsg)
         else:
             if self.conf["handyrep"]["log_verbose"]:
-                logging.info("%s: %s" % (category, message,))
+                logging.info(logmsg)
             
         if alert_type:
             self.push_alert(alert_type, category, message)
+
+        self.push_log_stack(logmsg)
+        
+        return True
+
+    def push_log_stack(self, logmsg):
+        # pushes recent log items onto a stack of 100 messages
+        # so that the user can get the log in json format.
+        # and so that users logging to stdout can look at the log
+        if len(log_stack) > 100:
+            log_stack.pop(0)
+
+        ls.append(logmsg)
         return True
 
     def return_log(self, success, details, extra = {}):
@@ -70,15 +89,21 @@ class HandyRep(object):
 
     def read_log(self, numlines=20):
         # reads the last N lines of the log
+        # reads from the stack if less than 100 lines; otherwise reads
+        # from disk
         # uses byte position to make it more efficient
-        lbytes = numlines * 100
-        with open(self.conf["handyrep"]["log_file"], "r") as logf:
-            logf.seek (0, 2)           # Seek @ EOF
-            fsize = logf.tell()        # Get Size
-            logf.seek (max (fsize-lbytes, 0), 0)
-            lines = logf.readlines()       # Read to end
+        # also, if stdout, we can only pull log from the array
+        if numlines <= 100 or self.conf["handyrep"]["log_file"] == 'stdout':
+            return list(reversed(self.log_stack))[0:numlines]
+        else:
+            lbytes = numlines * 100
+            with open(self.conf["handyrep"]["log_file"], "r") as logf:
+                logf.seek (0, 2)           # Seek @ EOF
+                fsize = logf.tell()        # Get Size
+                logf.seek (max (fsize-lbytes, 0), 0)
+                lines = logf.readlines()       # Read to end
 
-        lines = lines[-numlines:]    # Get last 10 lines
+            lines = lines[-numlines:]    # Get last 10 lines
         return list(reversed(lines))
 
     def get_setting(self, setting_name):
@@ -549,6 +574,8 @@ class HandyRep(object):
                     master_count += 1
                     pollrep = self.poll_master()
                     ret["servers"].update(pollrep)
+                    if succeded(pollrep):
+                        rel.update(return_dict(True, "master is working"))
                     ret["servers"][servname] = pollrep
                 elif servdeets["role"] == "replica":
                     pollrep = self.poll_server(servname)
@@ -1025,7 +1052,7 @@ class HandyRep(object):
                             if servinfo["role"] == "replica" and servinfo["enabled"]:
                                 # don't check result, we do that in
                                 # the remaster procedure
-                                self.remaster(servname, newmaster)
+                                self.remaster(servername, newmaster)
                     # fail over connections:
                     if succeeded(self.connection_failover(replica)):
                         # update statuses
@@ -1592,6 +1619,10 @@ class HandyRep(object):
         masterconf = self.servers[newmaster]
         
         recparam["replica_connection"] = "host=%s port=%s user=%s application_name=%s" % (masterconf["hostname"], masterconf["port"], self.conf["handyrep"]["replication_user"], replicaserver,)
+
+        if self.conf["passwords"]["replication_pass"]:
+            recparam["replica_connection"] = "%s password=%s" %
+(recparam["replica_connection"],self.conf["passwords"]["replication_pass"])
         
         # set up fabric
         env.key_filename = self.servers[replicaserver]["ssh_key"]
