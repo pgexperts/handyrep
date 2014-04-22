@@ -43,7 +43,7 @@ class HandyRepPlugin(object):
         for command in commands:
             try:
                 with shell_env(PGPASSWORD=pgpasswd):
-                    runit = sudo(command, user=runas, warn_only=True,pty=False)
+                    runit = sudo(command, user=runas, warn_only=True,pty=False, quiet=True)
                 rundict.update({ "details" : runit ,
                     "return_code" : runit.return_code })
                 if runit.succeeded:
@@ -90,7 +90,7 @@ class HandyRepPlugin(object):
             "return_code" : None }
         for command in commands:
             try:
-                runit = run(command, warn_only=True)
+                runit = run(command, warn_only=True, quiet=True)
                 rundict.update({ "details" : runit ,
                     "return_code" : runit.return_code })
                 if runit.succeeded:
@@ -151,9 +151,9 @@ class HandyRepPlugin(object):
         try:
             upload_template( templatename, destination, use_jinja=True, context=template_params, template_dir=self.conf["handyrep"]["templates_dir"], use_sudo=True )
             if file_mode:
-                sudo("chmod %d %s" % (file_mode, destination,))
+                sudo("chmod %d %s" % (file_mode, destination,), quiet=True)
             if new_owner:
-                sudo("chown %s %s" % (new_owner, destination,))
+                sudo("chown %s %s" % (new_owner, destination,), quiet=True)
         except:
             retdict = return_dict(False, "could not push template %s to server %s" % (templatename, servername,))
         else:
