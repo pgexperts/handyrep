@@ -11,12 +11,15 @@ class push_email_alert_simple(HandyRepPlugin):
 
     def run(self, alert_type, category, message):
         myconf = get_myconf()
+        clustname = self.conf["handyrep"]["cluster_name"]
 
     msgtext = "HandyRep Server Alert:
 
+Cluster: %s
+
 Category: %s
 
-Message: %s""" % (category, message,)
+Message: %s""" % (clustname, category, message,)
 
     msg = MIMEText(msgtext)
     if myconf["subject"]:
@@ -24,7 +27,7 @@ Message: %s""" % (category, message,)
     else:
         subjtag = "[HandyRepAlert]"
 
-    msg["Subject"] = "%s: %s %s" % (subjtag, alert_type, category,)
+    msg["Subject"] = "%s: %s %s %s" % (subjtag, clustname, alert_type, category,)
     msg["From"] = myconf["email_from"]
     msg["To"] = myconf["email_to"]
 

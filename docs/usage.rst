@@ -6,7 +6,7 @@ HandyRep is a RESTful network service or library which manages status monitoring
 Daemon Usage
 ------------
 
-HandyRep ships with the HandyRep Flask Daemon, which is the standard way to use HandyRep.  This Daemon runs constantly on the HandyRep server, performing scheduled checks and tasks, and responding to GET and POST requests for status information and to perform manual actions (such as cloning a new replica).  In this mode, HandyRep supplies a service-oriented interface for managing your database cluster; you run the daemon and whenever you need to make changes to the cluster, you send it commands.
+HandyRep ships with the HandyRep Flask Daemon, which is the standard way to use HandyRep.  This Daemon runs constantly on the HandyRep server, performing scheduled checks and tasks, and responding to GET requests for status information and to perform manual actions (such as cloning a new replica).  In this mode, HandyRep supplies a service-oriented interface for managing your database cluster; you run the daemon and whenever you need to make changes to the cluster, you send it commands.
 
 Note that the Daemon is single-process; HandyRep does not currently do any multiprocess activity.  As such, the web server
 you are using as a container for the Daemon needs to support single-process configuration.
@@ -19,6 +19,13 @@ HandyRep can also be incorporated into a larger application as a library instead
 Note that, if you use HandyRep as a library, it is up to you to manage scheduled checks and tasks, and ensure that you don't start more than one instance of the library at once.
 
 The rest of this document assumes that you are running in Daemon mode.  If you are using HandyRep as a library, you will need to map to the appropriate API calls.
+
+GUI Usage
+---------
+
+Handyrep ships with a sample GUI web interface, which is intended more as an example of how to use the HandyRep API than as a long-term management interface for HandyRep.  However, the GUI web interface does cover all current API commands, and as such is a fully usable management tool.
+
+Set GUI.md for more details about using the Web GUI.
 
 Assumptions Made by HandyRep
 ----------------------------
@@ -43,12 +50,13 @@ Currently Not Implemented
 
 The following features are not yet supported.  They may be in some future HandyRep version, according to demand and contributions.
 
-* GUI web interface
 * Communications protocol between HandyRep servers in an HA configuration.
 * Automated re-routing of requests to the current HandyRep master in HA configurations.
 * Support for pg_rewind on failback.
 * Support for cascading replication.
+* Support for synchronous replication.
 * HandyRep log rotation.
+* Pluggable configuration storage (e.g. Zookeeper)
 
 Plugins
 -------
@@ -100,3 +108,4 @@ Log
 ---
 
 HandyRep keeps a log of all of its actions, at a location configured in handyrep.conf.  The tail of this log is available via the API so that you can check recent actions including failover.
+

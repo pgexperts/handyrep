@@ -30,7 +30,7 @@ class select_replica_furthest_ahead(HandyRepPlugin):
                 else:
                     self.sortsrv[serv] = { "position" : reppos,
                         "lagged" : 1 }
-        sortedreps = sorted(self.sortsrv, key=self.servsort)
+        sortedreps = sorted(self.sortsrv, key=self.servsort, reverse=True)
         return sortedreps
 
     def servsort(self, key):

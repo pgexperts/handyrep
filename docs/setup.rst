@@ -16,6 +16,22 @@ Plus, if you are using the Daemon:
 
 * flask 0.8+
 
+And one of the following:
+
+* apache2 + mod_wsgi
+* nginx + uWSGI
+* daemontools
+
+Plus, if using the sample WebGUI:
+
+* Flask-WTF 0.9.4+
+* MarkupSafe 0.18+
+* WTForms 1.0.5+
+* Werkzeug 0.9.4+
+* itsdangerous 0.23+
+* requests 2.2.1+
+* wsgiref 0.1.2+
+
 Plus these general packages:
 
 * postgresql client software
@@ -29,7 +45,7 @@ Additionally, depending on your configuration and which plugins you are using, y
 PostgreSQL Servers Configuration
 -------------------------------
 
-HandyRep does not set up PostgreSQL on each node.  You are expected to do the installation and setup yourself, as well as configure PostgreSQL.conf to be compatible with replication.  We recommend using a configuration management system (such as Puppet, Chef or Salt) for this.  You need to set up the initial master and configure it as well.
+HandyRep does not set up PostgreSQL on each node.  You are expected to do the installation and setup yourself, as well as configure PostgreSQL.conf on the master to be compatible with replication.  We recommend using a configuration management system (such as Puppet, Chef or Salt) for this.  You need to set up the initial master and configure it as well.
 
 Note that this does mean that the various servers in your cluster can have different configurations, as long as they are all compatible with replication.  This allows for setups such as having designated reporting servers.
 
@@ -81,57 +97,6 @@ HandyRep may be programmed to work with pgBouncer, HAProxy, S3, Barman, WAL-E, B
 
 If you are using these other services, and expect HandyRep to manage them during failover, then it needs permissions to modify the service's configuration or give it directions.  For example, if using the pgbouncer plugin, then HandyRep needs the ability to rewrite pgbouncer.ini and restart pgbouncer, which would mean SSH and Sudo access on that server.
 
-Example Setup Narrative
-=======================
-
-Sally Admin is setting up HandyRep to provide high-availability for a four-server cluster, which contains:
-
-* db01: Initial PostgreSQL master
-* db02: Initial PostgreSQL replica
-* pgb01: pgBouncer server 1, and handyrep server
-* pgb02: pgBouncer server 2
-
-Sally has the following server environment:
-
-* Ubuntu 12.04
-* PostgreSQL 9.2.6
-* Apache/mod_wsgi
-* Relatively small database ("app-prod")
-* No archiving/DR set up at this time (relying on pgdumps)
-* HandyRep doesn't modify external load-balancing for the pgbouncer servers.
-* No auto-vivification for Postgres service
-
-She's also working under the following requirements:
-
-* 5 minute failover window
-* Up to 1 minute of data loss permitted
-
-Setting up pgb01
-----------------
-
-Sally installs the following from apt-get (using apt.postgresql.org for some):
-
-* PostgreSQL-9.3-client
-* pgbouncer
-* python-pip
-* psycopg2
-* Apache
-* mod_wsgi
-
-In order to get current versions, she installs the following into a virtualenv using pip:
-
-* flask
-* fabric
-* ConfigObj
-* jinja2
-
-She then creates a "handyrep" user with its own home directory, and adds that user to the "admins" group.  She uses visudo to modify the admins group to not require a password for sudo.
-
-Switching to the handyrep user, she generates an ssh key, and then copies that public key to that user's authorized_keys.
-
-She then downloads the handyrep code and installs it at 
-
-
 handyrep.conf
 =============
 
@@ -167,6 +132,9 @@ override_server_file
 server_file
     Filename for the servers JSON definition file.  Default servers.save.  If running HandyRep under WSGI, this needs to be
     a full path, not just a filename.
+
+authentication_method
+    Plugin to use for authentication into Handyrep itself.  Defaults to no authentication.
     
 master_check_method
     Plugin to use in order to check if this HandyRep is the current HandyRep master server.  See "Multiple HandyRep Servers" in Usage.
