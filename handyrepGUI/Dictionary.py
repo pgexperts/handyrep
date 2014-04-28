@@ -170,7 +170,7 @@ Functions = {
 
     'manual_failover':{'function_name': 'manual_failover', 'description': 'Fail over to a new master, presumably for planned downtimes, '
         'maintenance, or server migrations.', 'short_description': 'Fail over to new master', 'params': [{'param_name': 'newmaster', 'param_default': None, 'param_description': 'Server to fail '
-        'over to. If not supplied, use the same master selection process as auto-failover.', 'param_type': 'text',
+        'over to. If not supplied, use the same master selection process as auto-failover.', 'param_type': 'text', 'required': False,
         'param_options': None}, {'param_name': 'remaster', 'param_default': None,'param_description': 'Whether or not to remaster '
         'all other servers to replicate from the new master. If not supplied, setting in handyrep.conf is used.', 'param_type': 'bool',
         'required': False, 'param_options': None}], 'result_information': 'This function returns data related to the success '
