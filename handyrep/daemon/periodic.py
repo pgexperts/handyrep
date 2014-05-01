@@ -8,7 +8,13 @@ def failover_check(poll_cycle):
 
     #print "failover check no. %d" % pollno
 
-    pollresult = hrdf.failover_check(pollno)
+    # need to wrap this in try fail so that the failover
+    # check doesn't go away if we hit a python bug
+    try:
+        pollresult = hrdf.failover_check(pollno)
+    except Exception as e:
+        pollresult = { "result" : "FAIL",
+            "details" : "Failover check encountered error: %s" % repr(e) }
 
     return pollresult
 

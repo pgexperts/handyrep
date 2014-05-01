@@ -4,7 +4,7 @@ from fabric.contrib.files import upload_template, exists
 #from fabric.context_managers import shell_env
 from lib.error import CustomError
 from lib.dbfunctions import get_one_val, get_one_row, execute_it, get_pg_conn
-from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr, lock_fabric, fabric_unlock_all
 import json
 from datetime import datetime, timedelta
 import logging
@@ -14,6 +14,7 @@ import psycopg2.extensions
 from os.path import join
 from subprocess import call
 import re
+import threading
 
 class HandyRepPlugin(object):
 
@@ -27,10 +28,12 @@ class HandyRepPlugin(object):
         # as a specific remote user.  returns the results
         # of the last command run.  aborts when any
         # command fails
+        lock_fabric()
         if sshpass:
             env.password = sshpass
         else:
             env.key_filename = self.servers[servername]["ssh_key"]
+            
         env.user = self.servers[servername]["ssh_user"]
         env.disable_known_hosts = True
         env.host_string = self.servers[servername]["hostname"]
@@ -57,7 +60,7 @@ class HandyRepPlugin(object):
                     "return_code" : None }
                 break
         
-        disconnect_all()
+        self.disconnect_and_unlock()
         return rundict
 
     def run_as_postgres(self, servername, commands):
@@ -81,6 +84,7 @@ class HandyRepPlugin(object):
         # exiting when the first command fails
         # returns a dic with the results of the last command
         # run
+        lock_fabric()
         env.key_filename = self.servers[servername]["ssh_key"]
         env.user = self.servers[servername]["ssh_user"]
         env.disable_known_hosts = True
@@ -104,7 +108,7 @@ class HandyRepPlugin(object):
                     "return_code" : None }
                 break
 
-        disconnect_all()
+        self.disconnect_and_unlock()
         return rundict
 
     def run_local(self, commands):
@@ -144,6 +148,7 @@ class HandyRepPlugin(object):
         # renders a template file and pushes it to the
         # target location on an external server
         # not implemented for writing to localhost at this time
+        lock_fabric()
         env.key_filename = self.servers[servername]["ssh_key"]
         env.user = self.servers[servername]["ssh_user"]
         env.disable_known_hosts = True
@@ -159,7 +164,7 @@ class HandyRepPlugin(object):
         else:
             retdict = return_dict(True, "pushed template")
         finally:
-            disconnect_all()
+            self.disconnect_and_unlock()
 
         return retdict
 
@@ -326,6 +331,11 @@ class HandyRepPlugin(object):
                     return None
         else:
             return None
+
+    def disconnect_and_unlock(self):
+        disconnect_all()
+        lock_fabric(False)
+        return True
 
     # the functions below are shell functions for stuff in
     # misc_utils and dbfunctions  they're created here so that
