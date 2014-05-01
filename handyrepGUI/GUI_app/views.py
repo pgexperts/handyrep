@@ -147,7 +147,6 @@ def function_detail(server_name, function):
         return redirect(url_for("results", server_name = server_name, function=function))
     return render_template("function_data.html", status=status, info=server_info, form=form, function = function_info)
 
-
 @app.route('/cluster/<function>', methods=['GET', 'POST'])
 def cluster_function_detail(function):
     global function_parameters
@@ -192,6 +191,7 @@ def results(server_name, function):
     global function_parameters
     if handyrep_address is None or username is None or password is None:
         return redirect(url_for("login"))
+
     print function_parameters
     if server_name == "cluster":
         server_info = None
@@ -210,7 +210,7 @@ def results(server_name, function):
         result_to_send = "Parameters were not entered correctly. Please renter them. Remember, handyrep is case sensitive."
     else:
         result_to_send = x.json()
-    #status information
+        #status information
     status = get_status()
     function_parameters = {}
     return render_template("results.html", status=status, info=server_info, results=function_parameters, result_to_send=result_to_send, function = function_info)
