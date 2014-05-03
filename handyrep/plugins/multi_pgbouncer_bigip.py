@@ -7,10 +7,27 @@
 # as role "pgbouncer" and enabled.
 
 # also intended to be run with the latest pgbouncer update which supports
-# include files for pgbouncer, instead of writing directly to pgbouncer.ini
+# include files for pgbouncer, instead of writing directly to pgbouncer.ini;
+# will not work correctly on standard pgbouncer
+# this plugin expects you to configure pgbouncer.ini, and to set up the
+# %include directives
 
 # further, this plugin requires that the handyrep user, DB and password be set
 # up on pgbouncer as a valid connection string.
+
+# configuration:
+'''
+    [[multi_pgbouncer_bigip]]
+        pgbouncerbin = "/usr/sbin/pgbouncer"
+        dblist_template = pgbouncer_dbs.ini.template
+        owner = postgres
+        config_location = "/etc/pgbouncer/pgbouncer.ini"
+        dblist_location = "/etc/pgbouncer/db_cluster1.ini"
+        database_list = postgres, libdata, pgbench
+        readonly_suffix = _ro
+        all_replicas = False
+        extra_connect_param =
+'''
 
 from plugins.handyrepplugin import HandyRepPlugin
 
@@ -98,11 +115,11 @@ class multi_pgbouncer_bigip(HandyRepPlugin):
         dbsect = { "dbsection" : self.dbconnect_list(master) }
         # push new config
         myconf = self.conf["plugins"]["multi_pgbouncer"]
-        writeconf = self.push_template(bouncerserver,myconf["template"],myconf["config_location"],dbsect,myconf["owner"])
+        writeconf = self.push_template(bouncerserver,myconf["dblist_template"],myconf["dblist_location"],dbsect,myconf["owner"])
         if self.failed(writeconf):
             return self.rd(False, "could not push new pgbouncer configuration to pgbouncer server")
         # restart pgbouncer
-        restart_command = "%s -u %s -d -R %s" % (myconf["pgbouncerbin"],myconf["owner"],myconf["pgbouncer_ini_location"],)
+        restart_command = "%s -u %s -d -R %s" % (myconf["pgbouncerbin"],myconf["owner"],myconf["config_location"],)
         rsbouncer = self.run_as_root(bouncerserver,[restart_command,])
         if self.succeeded(rsbouncer):
             return self.rd(True, "pgbouncer configuration updated")
@@ -121,8 +138,8 @@ class multi_pgbouncer_bigip(HandyRepPlugin):
 
     def test(self):
         #check that we have all config variables required
-        if self.failed( self.test_plugin_conf("multi_pgbouncer_bigip","pgbouncerbin","template","owner","config_location","database_list","readonly_suffix","all_replicas","bigip_user","tmsh_path")):
-            return self.rd(False, "multi-pgbouncer failover is not configured" )
+        if self.failed( self.test_plugin_conf("multi_pgbouncer_bigip","pgbouncerbin","dblist_template","owner","config_location","dblist_location", "database_list","readonly_suffix","all_replicas","bigip_user","tmsh_path")):
+            return self.rd(False, "multi-pgbouncer-bigip failover is not configured" )
         #check that we can connect to the pgbouncer servers
         blist = self.bouncer_list()
         if len(blist) == 0:
@@ -220,7 +237,6 @@ class multi_pgbouncer_bigip(HandyRepPlugin):
                 constr += self.dbconnect_line(myconf["database_list"], self.servers[master]["hostname"], self.servers[master]["port"], myconf["readonly_suffix"], myconf["extra_connect_param"])
 
         return constr
-
 
     def dbconnect_line(self, database_list, hostname, portno, suffix, extra):
         confout = ""

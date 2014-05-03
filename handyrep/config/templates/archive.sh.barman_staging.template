@@ -11,7 +11,8 @@
 # users match between the source and target servers
 
 # also makes a second copy to the barman staging directory, intended for
-# spooling to the barman backup server
+# spooling to the barman backup server this copy is assumed to be less critical
+# so script does not error out if it fails
 
 SOURCE="$1" # %p
 FILE="$2" # %f
@@ -22,7 +23,11 @@ export RSYNC_RSH="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=n
 test -f {{ no_archive_file }} && exit 0
 
 # Copy the file to the local spool
-rsync --quiet --archive ${SOURCE} {{ staging_dir }}:${FILE}
+rsync --quiet --archive ${SOURCE} {{ staging_dir }}/${FILE}
+
+if [ $? -ne 0 ]; then
+    echo "WAL copy to local spool directory is failing"
+fi
 
 # Copy the file to the spool area on the replica, error out if
 # the transfer fails

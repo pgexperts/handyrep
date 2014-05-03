@@ -3,18 +3,26 @@
 # where the archive logs are written to whichever server
 # is the replica at the time, and a separate barman server
 # wal files are copied to an additional staging directory
-# before being copied off to the barman server by the poll()
-# method.
+# before being copied off to the barman server by a local cron
+# job on each server
+# this cron job is NOT managed by HandyRep at this time
 
 # this means that we give each server the other server
 # as its replica target
 
-# WARNING: Assumes that there's only two enabled servers
-# in the configuration.  Will break if there are more
-# than two!
-
 # depending on settings, may automatically disable
 # archive replication if the replica is down
+
+# configuration with examples
+'''
+        archive_directory = /var/lib/postgresql/wal_archive
+        archive_script_path =  /var/lib/postgresql/archive.sh
+        archive_script_template = archive.sh.barman_staging.template
+        stop_archiving_file = /var/lib/postgresql/NOARCHIVING
+        archivecleanup_path = /usr/lib/postgresql/9.3/bin/pg_archivecleanup
+        disable_on_fail = False
+        barman_staging_dir = /var/wal_spool/
+'''
 
 from plugins.handyrepplugin import HandyRepPlugin
 
@@ -74,26 +82,6 @@ class archive_barman_staging(HandyRepPlugin):
         # the barman server
         # try the currently enabled barman server
         master = self.get_master()
-        
-        for barman_target in self.get_barman_hosts():
-            barspool = "%s %s %s" % ( myconf["copy_script_location"], barman_target, myconf["barman_incoming_dir"] )
-            barspooled = self.run_as_postgres(master, myconf["barman_copy_script"], [barspool,])
-
-            # if it failed, try the alternate barman server
-            # and change which one is enabled
-            if self.failed(barspooled):
-                self.
-                self.log("ARCHIVE","Barman host %s failed.  Trying new barman host.", True)
-            else:
-                
-            barman_target = self.get_barman_host(replace=True)
-            if barman_target:
-                barspool = "%s %s %s" % ( myconf["copy_script_location"], barman_target, myconf["barman_incoming_dir"] )
-                barspooled = self.run_as_postgres(master, myconf["barman_copy_script"], [barspool,])
-
-        # if both failed, log error and proceed
-        self.get_barman_host(failed=True)
-        self.log("ARCHIVE","All Barman hosts failed", True)
 
         repservs = self.get_servers(role="replica")
         myconf = self.get_myconf()
@@ -163,25 +151,6 @@ class archive_barman_staging(HandyRepPlugin):
                 return serv
 
         return None
-
-    def get_barman_host(self, replace=False, failed=False):
-        if failed:
-            barmen = get_servers(role="barman")
-            for bserv in barmen:
-                self.servers[bserv]["status_no"] = 5
-                self.servers[bserv]["status"] = "down"
-            return None
-            
-        if replace:
-            barmen = get_servers(role="barman")
-            retbar = ""
-            for bserv in barmen:
-                if self.servers[bserv]["status_no"] = 1:
-                    self.servers[bserv]["status_no"] = 5
-                    self.servers[bserv]["status"] = "down"
-                else:
-                    retbar = bserv
-            return None
 
 
         
