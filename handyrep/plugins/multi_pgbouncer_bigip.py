@@ -19,7 +19,7 @@
 '''
     [[multi_pgbouncer_bigip]]
         pgbouncerbin = "/usr/sbin/pgbouncer"
-        dblist_template = pgbouncer_dbs.ini.template
+        dblist_template = pgbouncer_dblist.ini.template
         owner = postgres
         config_location = "/etc/pgbouncer/pgbouncer.ini"
         dblist_location = "/etc/pgbouncer/db_cluster1.ini"
@@ -114,7 +114,7 @@ class multi_pgbouncer_bigip(HandyRepPlugin):
         # get configuration
         dbsect = { "dbsection" : self.dbconnect_list(master) }
         # push new config
-        myconf = self.conf["plugins"]["multi_pgbouncer"]
+        myconf = self.get_myconf()
         writeconf = self.push_template(bouncerserver,myconf["dblist_template"],myconf["dblist_location"],dbsect,myconf["owner"])
         if self.failed(writeconf):
             return self.rd(False, "could not push new pgbouncer configuration to pgbouncer server")

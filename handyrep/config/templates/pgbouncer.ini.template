@@ -5,7 +5,7 @@
 
 [pgbouncer]
 pool_mode = session
-listen_port = 6432
+listen_port = {{ port }}
 listen_addr = *
 auth_type = md5
 auth_file = /etc/pgbouncer/userlist.txt

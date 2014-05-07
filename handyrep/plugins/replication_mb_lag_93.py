@@ -26,7 +26,7 @@ class replication_mb_lag_93(HandyRepPlugin):
         FROM pg_stat_replication
         WHERE application_name = %s""", [replicaserver,])
         if replag is not None:
-            self.servers[replicaserver][lag] = replag
+            self.servers[replicaserver]["lag"] = replag
             return self.rd(True, "server is replicatting", { "replicating" : True, "lag" : replag })
         else:
             return self.rd(True, "server %s is not currently in replication", { "replicating" : False, "lag" : 0 })

@@ -82,7 +82,7 @@ class multi_pgbouncer(HandyRepPlugin):
         else:
             master = self.get_master_name()
         # get configuration
-        dbsect = { "dbsection" : self.dbconnect_list(master) }
+        dbsect = { "dbsection" : self.dbconnect_list(master), "port" : self.servers[bouncerserver]["port"] }
         # push new config
         myconf = self.conf["plugins"]["multi_pgbouncer"]
         writeconf = self.push_template(bouncerserver,myconf["template"],myconf["config_location"],dbsect,myconf["owner"])
