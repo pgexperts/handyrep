@@ -6,9 +6,21 @@
 
 # this auth module requires the dictionary lookup password
 # to be stored in plain text in the configuration file
-# since the alternative is to make users log in with their CN, we do it anyway
+# since the alternative is to make users log in with their
+# CN, we do it anyway
 
 # requires python_ldap module
+
+# configuration:
+'''
+    [[ldap_auth]]
+        uri = ldap://ldap.corp.com/
+        bind_dn = 'cn=pgauth,cn=Users,dc=corp,dc=com'
+        base_dn = 'dc=corp,dc=com'
+        hr_group = DBA
+        log_auth = False
+        debug_auth = False
+'''
 
 import ldap
 
@@ -31,7 +43,7 @@ class ldap_auth(HandyRepPlugin):
             user = users[0]
 
         if not is_user_in_group(user, group):
-            return self.exit_log('Error: %s is not in group %s.' % (username, group)
+            return self.exit_log('Error: %s is not in group %s.' % (username, group))
 
         if not authenticate(user, password):
             return self.exit_log("Incorrect password for %s" % user)
@@ -40,10 +52,10 @@ class ldap_auth(HandyRepPlugin):
 
 
     def test(self):
-        if self.failed(self.test_plugin_conf("ldap_auth","ro_function_list")):
+        if self.failed(self.test_plugin_conf("ldap_auth","uri","bind_dn","base_dn","hr_group")):
             return self.rd(False, "plugin ldap_auth is not correctly configured")
         else:
-            return self.rd(False, "passwords not set for simple_password_auth")
+            return self.rd(True, "ldap_auth has all configuration variables")
 
 
     def exit_log (self, success, message):
@@ -54,7 +66,7 @@ class ldap_auth(HandyRepPlugin):
 
             return self.rd(success, message)
         else:
-            self.log("AUTH", "user %s failed to authenticate", is_true(myconf["log_auth"])
+            self.log("AUTH", "user %s failed to authenticate", is_true(myconf["log_auth"]))
             
             if is_true(myconf["debug_auth"]):
                 return self.rd(success, message)
@@ -62,7 +74,7 @@ class ldap_auth(HandyRepPlugin):
                 return self.rd(success, "Authentication Failed")
 
 
-    def search_for_user(username):
+    def search_for_user(self, username):
         """
         Search for a user by username (e.g., 'qweaver').
         Return the a list of matching LDAP objects.
@@ -74,7 +86,7 @@ class ldap_auth(HandyRepPlugin):
         user_dn = 'cn=Users,' + myconf["base_dn"]
         
         l = ldap.initialize(myconf["uri"])
-        l.bind_s(myconf["bind_dn"], myconf["bind_password"])
+        l.bind_s(myconf["bind_dn"], self.conf["passwords"]["bind_password"])
         matching_users = l.search_s(
             user_dn,
             ldap.SCOPE_SUBTREE,
@@ -83,7 +95,7 @@ class ldap_auth(HandyRepPlugin):
         return matching_users
 
 
-    def dump_user(user):
+    def dump_user(self, user):
         """
         Take an LDAP user object and return is as a pretty-printed string.
         Example usage:
@@ -102,7 +114,7 @@ class ldap_auth(HandyRepPlugin):
             print key, '=', fields[key]
 
 
-    def is_user_in_group(user, group):
+    def is_user_in_group(self, user, group):
         """
         Take an LDAP user object and a group name. Return True if the user
         is in the group, False otherwise.
@@ -129,7 +141,7 @@ class ldap_auth(HandyRepPlugin):
         return False
 
 
-    def authenticate(user, password):
+    def authenticate(self, user, password):
         """
         Take an LDAP user object and a cleartext password string.
         Return True if AD successfully authenticates the user with the password,

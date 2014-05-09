@@ -1371,7 +1371,11 @@ class HandyRep(object):
     def clone(self, replicaserver, reclone=False, clonefrom=None):
         # use config master if not supplied
         if clonefrom:
-            clomaster = clonefrom
+            cloprops = self.servers[clonefrom]
+            if cloprops["enabled"] and cloprops["status_no"] < 4:
+                clomaster = clonefrom
+            else:
+                return return_dict(False, "you may not clone from a server which is non-operational")
         else:
             clomaster = self.get_master_name()
         # abort if this is the master

@@ -623,7 +623,7 @@ NOT do other failover procedures.  Does not prevent creating two masters.
     promote
         newmaster server name
 
-servername
+newmaster
     the name of the server to promote.  required
 
 Returns RD
