@@ -163,7 +163,7 @@ Functions = {
 
 
     'promote':{'function_name': 'promote', 'description': 'Promotes the designated replica to become a master or standalone. Does '
-        'NOT do other failover procedures. Does not prevent creating two masters.', 'short_description': 'Promote replica', 'params': [{'param_name': 'severname',
+        'NOT do other failover procedures. Does not prevent creating two masters.', 'short_description': 'Promote replica', 'params': [{'param_name': 'newmaster',
         'param_default': None, 'param_description': 'The name of the server to start.', 'param_type': 'text','required': True, 'param_options': None}],
                'result_information': 'This function returns data related to the success '
         'of the promotion of the server.<h3>result</h3><h4 style="padding-left:1em">SUCCESS</h4><p style="padding-left:2em">The server has been promoted.</p><h4 style="padding-left:1em">FAIL</h4><p style="padding-left:2em">The server could not be promoted, check details.</p>'},

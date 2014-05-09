@@ -14,7 +14,7 @@
   <form action="" method="post" name = "true_false">
   {{ form.hidden_tag() }}
    {% for param in function.params %}
-       {% if not (param.param_name == "servername" or param.param_name == "clonefrom")%}
+       {% if not (param.param_name == "servername" or param.param_name == "replicaserver")%}
             <h2>{{ param.param_name }}<br> <span style="padding-left: 1em; font-size: .8em"> {{ param.param_description }}</span></h2>
             {% if param.param_default %}
                 <h2 style="color: red; font-size: 1em">If left alone this will default to {{ param.param_default }}</h2>
