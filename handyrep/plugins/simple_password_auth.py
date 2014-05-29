@@ -12,6 +12,8 @@ class simple_password_auth(HandyRepPlugin):
         myconf = self.get_myconf()
         # get list of readonly functions, if any
         rofunclist = myconf["ro_function_list"]
+        if rofunclist is None:
+            rofunclist = ["no_such_function",]
 
         # try admin password
         if userpass == self.conf["passwords"]["admin_password"]:

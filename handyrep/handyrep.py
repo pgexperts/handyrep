@@ -1928,7 +1928,7 @@ class HandyRep(object):
         self.disconnect_and_unlock()
         return result
 
-    def authenticate(self, username, userpass, funcname):
+    def authenticate(self, username, userpass, funcname=""):
         # simple authentication function which
         # authenticates the user against the passwords
         # set in handyrep.conf

@@ -8,6 +8,7 @@
 # to be stored in plain text in the configuration file
 # since the alternative is to make users log in with their
 # CN, we do it anyway
+# some LDAP configs do not require such a password.
 
 # requires python_ldap module
 
@@ -34,21 +35,21 @@ class ldap_auth(HandyRepPlugin):
 
         group = myconf["hr_group"]
 
-        users = search_for_user(username)
+        users = self.search_for_user(username)
         if not users:
-            return self.exit_log("User %s not found" % username)
+            return self.exit_log(False, "User %s not found" % username, username)
         elif len(users) > 1:
-            return self.exit_log("More than one user found for %s" % username)
+            return self.exit_log(False, "More than one user found for %s" % username, username)
         else:
             user = users[0]
 
-        if not is_user_in_group(user, group):
-            return self.exit_log('Error: %s is not in group %s.' % (username, group))
+        if not self.is_user_in_group(user, group):
+            return self.exit_log(False, 'Error: %s is not in group %s.' % (username, group), username)
 
-        if not authenticate(user, password):
-            return self.exit_log("Incorrect password for %s" % user)
+        if not self.authenticate(user, userpass):
+            return self.exit_log(False, "Incorrect password for %s" % username, username)
         else:
-            return self.exit_log("Authenticated")
+            return self.exit_log(True, "Authenticated", username)
 
 
     def test(self):
@@ -58,17 +59,17 @@ class ldap_auth(HandyRepPlugin):
             return self.rd(True, "ldap_auth has all configuration variables")
 
 
-    def exit_log (self, success, message):
+    def exit_log (self, success, message, username=''):
         myconf = self.get_myconf()
         if success:
-            if is_true(myconf["log_auth"]):
+            if self.is_true(myconf["log_auth"]):
                 self.log("AUTH", "user %s authenticated" % username)
 
             return self.rd(success, message)
         else:
-            self.log("AUTH", "user %s failed to authenticate", is_true(myconf["log_auth"]))
+            self.log("AUTH", "user %s failed to authenticate" % username, self.is_true(myconf["log_auth"]))
             
-            if is_true(myconf["debug_auth"]):
+            if self.is_true(myconf["debug_auth"]):
                 return self.rd(success, message)
             else:
                 return self.rd(success, "Authentication Failed")
@@ -83,10 +84,13 @@ class ldap_auth(HandyRepPlugin):
 
         """
         myconf = self.get_myconf()
-        user_dn = 'cn=Users,' + myconf["base_dn"]
+        user_dn = 'CN=Users,' + myconf["base_dn"]
         
         l = ldap.initialize(myconf["uri"])
-        l.bind_s(myconf["bind_dn"], self.conf["passwords"]["bind_password"])
+        bpass = self.conf["passwords"]["bind_password"]
+        if bpass is None:
+            bpass = ""
+        l.bind_s(myconf["bind_dn"], bpass)
         matching_users = l.search_s(
             user_dn,
             ldap.SCOPE_SUBTREE,
@@ -136,7 +140,7 @@ class ldap_auth(HandyRepPlugin):
 
         for mem in memberships:
             # Bit of hard-coding here.
-            if mem == group_dn:
+            if mem.lower() == group_dn.lower():
                 return True
         return False
 
