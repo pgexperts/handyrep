@@ -66,7 +66,7 @@ def verify_all():
 def verify_server(servername):
     return hr.verify_server(servername)
 
-def reload_conf(config_file='handyrep.conf'):
+def reload_conf(config_file=None):
     return hr.reload_conf(config_file)
 
 def get_master_name():

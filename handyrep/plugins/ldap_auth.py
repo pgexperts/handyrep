@@ -85,17 +85,22 @@ class ldap_auth(HandyRepPlugin):
         """
         myconf = self.get_myconf()
         user_dn = 'CN=Users,' + myconf["base_dn"]
-        
+
         l = ldap.initialize(myconf["uri"])
         bpass = self.conf["passwords"]["bind_password"]
         if bpass is None:
             bpass = ""
-        l.bind_s(myconf["bind_dn"], bpass)
-        matching_users = l.search_s(
-            user_dn,
-            ldap.SCOPE_SUBTREE,
-            filterstr='(samaccountname={un})'.format(un=username)
-            )
+        try:
+            l.bind_s(myconf["bind_dn"], bpass)
+            matching_users = l.search_s(
+                user_dn,
+                ldap.SCOPE_SUBTREE,
+                filterstr='(samaccountname={un})'.format(un=username)
+                )
+        except Exception as e:
+            self.log("could not search LDAP server for usernames: %s" % str(e), True)
+            return None
+            
         return matching_users
 
 

@@ -142,7 +142,7 @@ Functions = {
 
     'reload_conf':{'function_name': 'reload_conf', 'description': 'Reload handyrep configuration from the handyrep.conf file. '
                 'Allows changing of configuration files.', 'short_description': 'Reload configuration', 'params': [{'param_name': 'config_file', 'param_default': None, 'param_description':
-        'File path location of the configuration file. Defaults to "handyrep.conf" in the working directory.', 'param_type': 'text',
+        'File path location of the configuration file. Defaults to current config location.', 'param_type': 'text',
         'required': False, 'param_options': None}], 'result_information': 'This function returns'
                         'data related to the success of the creation of the schema and table.'},
 

@@ -1668,6 +1668,8 @@ class HandyRep(object):
         if self.conf["archive"]["archiving"] and self.conf["archive"]["archive_script_method"]:
             arch = self.get_plugin(self.conf["archive"]["archive_script_method"])
             archit = arch.run(servername)
+            if failed(archit):
+                self.log("ARCHIVE", "Could not configure archiving: %s" % archit["details"], True)
             return archit
         else:
             return return_dict(True, "archiving not configured, so ignoring this")
@@ -1735,7 +1737,10 @@ class HandyRep(object):
         if archconf["archiving"] and archconf["archive_script_method"]:
             arch = self.get_plugin(archconf["archive_script_method"])
             startit = arch.start()
-            self.log("ARCHIVE", "Archiving enabled")
+            if succeeded(startit):
+                self.log("ARCHIVE", "Archiving enabled")
+            else:
+                self.log("ARCHIVE", "Could not start archiving: %s" % startit["details"], True)
             return startit
         else:
             return return_dict(False, "Cannot start archiving because it is not configured.")
@@ -1747,7 +1752,10 @@ class HandyRep(object):
         if archconf["archiving"] and archconf["archive_script_method"]:
             arch = self.get_plugin(archconf["archive_script_method"])
             startit = arch.stop()
-            self.log("ARCHIVE", "Archiving disabled")
+            if succeeded(startit):
+                self.log("ARCHIVE", "Archiving disabled")
+            else:
+                self.log("ARCHIVE", "Could not stop archiving: %s" % startit["details"], True)
             return startit
         else:
             return return_dict(False, "Cannot stop archiving because it is not configured.")

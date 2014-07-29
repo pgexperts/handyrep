@@ -15,7 +15,7 @@ def verify_all():
 def verify_server(servername):
     return hrdf.verify_server(servername)
 
-def reload_conf(config_file='handyrep.conf'):
+def reload_conf(config_file=None):
     return hrdf.reload_conf(config_file)
 
 def get_master_name():
