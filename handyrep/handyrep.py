@@ -31,7 +31,7 @@ class HandyRep(object):
          'datefmt': "%Y-%m-%d %H:%M:%S",
          'format':  "%(asctime)-12s %(message)s",
         }
-        if self.conf["handyrep"]["config_file"] == 'stdout':
+        if self.conf["handyrep"]["log_file"] == 'stdout':
           opts['stream'] = sys.stdout
         else:
           opts['filename'] = self.conf["handyrep"]["log_file"]
